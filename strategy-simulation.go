@@ -12,8 +12,7 @@ import (
 )
 
 const (
-	initialGraphValue = 0.0
-	segmentLength     = 1.0
+	segmentLength = 1.0
 )
 
 func main() {
@@ -32,7 +31,7 @@ func main() {
 		}
 	}
 
-	expectedArgCount := 1 + lineCount + parabolaCount*2 // 1 for initial value, lineCount for lines, parabolaCount*2 for parabolas
+	expectedArgCount := 1 + lineCount + parabolaCount*2
 
 	if len(args) != expectedArgCount {
 		fmt.Println("Expected argument count: ", expectedArgCount)
@@ -40,11 +39,11 @@ func main() {
 	}
 
 	var (
-		y   = initialGraphValue
-		xys plotter.XYs
+		y, _ = strconv.ParseFloat(args[0], 64)
+		xys  plotter.XYs
 	)
 
-	argIndex := 0
+	argIndex := 1
 	xOffset := 0.0
 	for _, isParabola := range piecewiseFunctions {
 		if isParabola {
@@ -52,7 +51,7 @@ func main() {
 			argIndex++
 			b, _ := strconv.ParseFloat(args[argIndex], 64)
 			argIndex++
-			c := y - a*math.Pow(segmentLength, 2) - b*segmentLength
+			c := y - a*math.Pow(xOffset, 2) - b*xOffset
 
 			for j := 0.0; j <= segmentLength; j += 0.01 {
 				x := xOffset + j
@@ -62,7 +61,7 @@ func main() {
 		} else {
 			m, _ := strconv.ParseFloat(args[argIndex], 64)
 			argIndex++
-			b := y - m*segmentLength
+			b := y - m*xOffset
 
 			for j := 0.0; j <= segmentLength; j += 0.01 {
 				x := xOffset + j
