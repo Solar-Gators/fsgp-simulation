@@ -57,7 +57,7 @@ func main() {
 
 			for x := xOffset; x <= xOffset+segmentLength; x += graphResolution {
 				y = a*math.Pow(x, 2) + b*x + c
-				xys = append(xys, plotter.XY{x, y})
+				xys = append(xys, plotter.XY{X: x, Y: y})
 			}
 		} else {
 			m, _ := strconv.ParseFloat(args[argIndex], 64)
@@ -66,7 +66,7 @@ func main() {
 
 			for x := xOffset; x <= xOffset+segmentLength; x += graphResolution {
 				y = m*x + b
-				xys = append(xys, plotter.XY{x, y})
+				xys = append(xys, plotter.XY{X: x, Y: y})
 			}
 		}
 		xOffset += segmentLength
