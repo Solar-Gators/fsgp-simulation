@@ -12,14 +12,16 @@ import (
 )
 
 const (
-	segmentLength = 1.0
+	segmentLength   = 1.0
+	graphResolution = 0.001
 )
 
 func main() {
 	args := os.Args[1:]
 
 	// Define whether each segment is a parabola (true) or a line (false)
-	piecewiseFunctions := []bool{true, false, true, false, true}
+	// piecewiseFunctions := []bool{true, false, true, false}
+	piecewiseFunctions := []bool{true, false}
 	lineCount := 0
 	parabolaCount := 0
 
@@ -53,9 +55,8 @@ func main() {
 			argIndex++
 			c := y - a*math.Pow(xOffset, 2) - b*xOffset
 
-			for j := 0.0; j <= segmentLength; j += 0.01 {
-				x := xOffset + j
-				y = a*math.Pow(j, 2) + b*j + c
+			for x := xOffset; x <= xOffset+segmentLength; x += graphResolution {
+				y = a*math.Pow(x, 2) + b*x + c
 				xys = append(xys, plotter.XY{x, y})
 			}
 		} else {
@@ -63,9 +64,8 @@ func main() {
 			argIndex++
 			b := y - m*xOffset
 
-			for j := 0.0; j <= segmentLength; j += 0.01 {
-				x := xOffset + j
-				y = m*j + b
+			for x := xOffset; x <= xOffset+segmentLength; x += graphResolution {
+				y = m*x + b
 				xys = append(xys, plotter.XY{x, y})
 			}
 		}
@@ -81,7 +81,27 @@ func main() {
 
 	p.Add(lines)
 
-	// Save the plot to a PNG file.
+	p.X.Min = 0
+	p.Y.Min = 0
+
+	p.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Ceil(min); i <= max+1; i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+
+	p.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Ceil(min); i <= max+1; i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+
+	p.Add(plotter.NewGrid())
+
 	if err := p.Save(4*vg.Inch, 4*vg.Inch, "graph.png"); err != nil {
 		panic(err)
 	}
