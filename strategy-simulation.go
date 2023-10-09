@@ -18,10 +18,13 @@ const (
 func main() {
 	args := os.Args[1:]
 
+  // test command:
+	// go run . 9 0 1 1 1 1 -10 1
+
 	// Define whether each segment is a parabola (true) or a line (false)
 	// piecewiseFunctions := []bool{true, false, true, false}
 	piecewiseFunctions := []bool{true, false, true, false}
-  segmentLengths := []float64{2, 1, 2, 1}
+	segmentLengths := []float64{2, 1, 2, 1}
 
 	lineCount := 0
 	parabolaCount := 0
@@ -34,7 +37,8 @@ func main() {
 		}
 	}
 
-	expectedArgCount := 1 + lineCount + parabolaCount*2
+	// initial velocity, initial acceleration, then accel curve params
+	expectedArgCount := 2 + lineCount + parabolaCount*2
 
 	if len(args) != expectedArgCount {
 		fmt.Println("Expected argument count: ", expectedArgCount)
@@ -42,11 +46,14 @@ func main() {
 	}
 
 	var (
-		y, _ = strconv.ParseFloat(args[0], 64)
-		xys  plotter.XYs
+		initialVelocity, _ = strconv.ParseFloat(args[0], 64)
+		y, _               = strconv.ParseFloat(args[1], 64)
+		xys                plotter.XYs
 	)
 
-	argIndex := 1
+	fmt.Println("initialVelocity: ", initialVelocity)
+
+	argIndex := 2
 	xOffset := 0.0
 	for i, isParabola := range piecewiseFunctions {
 		if isParabola {
@@ -63,7 +70,7 @@ func main() {
 		} else {
 			m, _ := strconv.ParseFloat(args[argIndex], 64)
 			argIndex++
-		b := y - m*xOffset
+			b := y - m*xOffset
 
 			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
 				y = m*x + b
