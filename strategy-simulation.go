@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	segmentLength   = 1.0
 	graphResolution = 0.001
 )
 
@@ -21,7 +20,9 @@ func main() {
 
 	// Define whether each segment is a parabola (true) or a line (false)
 	// piecewiseFunctions := []bool{true, false, true, false}
-	piecewiseFunctions := []bool{true, false}
+	piecewiseFunctions := []bool{true, false, true, false}
+  segmentLengths := []float64{2, 1, 2, 1}
+
 	lineCount := 0
 	parabolaCount := 0
 
@@ -47,7 +48,7 @@ func main() {
 
 	argIndex := 1
 	xOffset := 0.0
-	for _, isParabola := range piecewiseFunctions {
+	for i, isParabola := range piecewiseFunctions {
 		if isParabola {
 			a, _ := strconv.ParseFloat(args[argIndex], 64)
 			argIndex++
@@ -55,21 +56,21 @@ func main() {
 			argIndex++
 			c := y - a*math.Pow(xOffset, 2) - b*xOffset
 
-			for x := xOffset; x <= xOffset+segmentLength; x += graphResolution {
+			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
 				y = a*math.Pow(x, 2) + b*x + c
 				xys = append(xys, plotter.XY{X: x, Y: y})
 			}
 		} else {
 			m, _ := strconv.ParseFloat(args[argIndex], 64)
 			argIndex++
-			b := y - m*xOffset
+		b := y - m*xOffset
 
-			for x := xOffset; x <= xOffset+segmentLength; x += graphResolution {
+			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
 				y = m*x + b
 				xys = append(xys, plotter.XY{X: x, Y: y})
 			}
 		}
-		xOffset += segmentLength
+		xOffset += segmentLengths[i]
 	}
 
 	p := plot.New()
