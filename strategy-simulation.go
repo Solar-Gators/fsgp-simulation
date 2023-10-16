@@ -17,14 +17,15 @@ const (
 )
 
 /*
-so essentially, if, on a given segment of track,
-our acceleration (i.e., x”) wrt x = some quadratic function of x (i.e. of the form ax^2 + bx + c)
-then x' = dx/dt = (a/3)x^3 + (b/2)x^2 + cx + initial_velocity
-thus, we derive dt = dx/[(a/3)x^3 + (b/2)x^2 + cx + initial_velocity]
-to find the time elapsed on the segment, we integrate the right side.
-this is a pretty complicated integral, so i've elected to use an approximation called simpson's method
-for the following two functions, i use q,w,e,r as arbitrary coefficients. "n" denotes the increments of the approximation
+  so essentially, if, on a given segment of track,
+  our acceleration (i.e., x”) wrt x = some quadratic function of x (i.e. of the form ax^2 + bx + c)
+  then x' = dx/dt = (a/3)x^3 + (b/2)x^2 + cx + initial_velocity
+  thus, we derive dt = dx/[(a/3)x^3 + (b/2)x^2 + cx + initial_velocity]
+  to find the time elapsed on the segment, we integrate the right side.
+  this is a pretty complicated integral, so i've elected to use an approximation called simpson's method
 */
+
+// for the following two functions, i use q,w,e,r as arbitrary coefficients. "n" denotes the increments of the approximation
 func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
 	return 1.0 / (q*math.Pow(x, 3) + w*math.Pow(x, 2) + e*x + r)
 }
