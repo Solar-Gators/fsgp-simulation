@@ -28,6 +28,7 @@ for the following two functions, i use q,w,e,r as arbitrary coefficients. "n" de
 func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
 	return 1.0 / (q*math.Pow(x, 3) + w*math.Pow(x, 2) + e*x + r)
 }
+
 func simpson(a float64, b float64, q float64, w float64, e float64, r float64, n float64) float64 {
 	h := (b - a) / n
 	secondpart := 0.00
@@ -42,41 +43,50 @@ func simpson(a float64, b float64, q float64, w float64, e float64, r float64, n
 	thirdpart *= 2.00
 	return ((h / 3.00) * (integrand(a, q, w, e, r) + secondpart + thirdpart + integrand(b, q, w, e, r)))
 }
-func main() {
-	args := os.Args[1:]
 
-	// test command:
+func main() {
+
+	// run command to test:
 	// go run . 9 0 1 1 1 1 -10 1
 
-	// Define whether each segment is a parabola (true) or a line (false)
-	// piecewiseFunctions := []bool{true, false, true, false}
+	rawArgs := os.Args[1:]
+
+	args := make([]float64, len(rawArgs))
+	for i, arg := range rawArgs {
+		val, err := strconv.ParseFloat(arg, 64)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		args[i] = val
+	}
+
+	// Define whether each segment is a straightaway (true) or a turn (false)
 	piecewiseFunctions := []bool{true, false, true, false}
 	segmentLengths := []float64{2, 1, 2, 1}
 
-	lineCount := 0
-	parabolaCount := 0
+	turnCount := 0
+	straightCount := 0
 
-	for _, isParabola := range piecewiseFunctions {
-		if isParabola {
-			parabolaCount++
+	for _, segmentType := range piecewiseFunctions {
+		if segmentType {
+			straightCount++
 		} else {
-			lineCount++
+			turnCount++
 		}
 	}
 
 	// initial velocity, initial acceleration, then accel curve params
-	expectedArgCount := 2 + lineCount + parabolaCount*2
+	expectedArgCount := 2 + turnCount + straightCount*2
 
-	if len(args) != expectedArgCount {
+	if len(rawArgs) != expectedArgCount {
 		fmt.Println("Expected argument count: ", expectedArgCount)
 		os.Exit(1)
 	}
 
-	var (
-		initialVelocity, _ = strconv.ParseFloat(args[0], 64)
-		y, _               = strconv.ParseFloat(args[1], 64)
-		xys                plotter.XYs
-	)
+	initialVelocity := args[0]
+	currentTickAccel := args[1]
+	var accelPlot plotter.XYs
 
 	fmt.Println("initialVelocity: ", initialVelocity)
 
@@ -88,33 +98,35 @@ func main() {
 	b := 0.00
 	c := 0.00
 	m := 0.00
-	for i, isParabola := range piecewiseFunctions {
-		if isParabola {
-			a, _ := strconv.ParseFloat(args[argIndex], 64)
+
+	for i, segmentIsStraight := range piecewiseFunctions {
+		if segmentIsStraight {
+			a := args[argIndex]
 			argIndex++
-			b, _ := strconv.ParseFloat(args[argIndex], 64)
+			b := args[argIndex]
 			argIndex++
-			c := y - a*math.Pow(xOffset, 2) - b*xOffset
+			c := currentTickAccel - a*math.Pow(xOffset, 2) - b*xOffset
 
 			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
-				y = a*math.Pow(x, 2) + b*x + c
-				xys = append(xys, plotter.XY{X: x, Y: y})
+				currentTickAccel = a*math.Pow(x, 2) + b*x + c
+				accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
 			}
 		} else {
-			m, _ := strconv.ParseFloat(args[argIndex], 64)
+			m := args[argIndex]
 			argIndex++
-			b := y - m*xOffset
+			b := currentTickAccel - m*xOffset
 
 			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
-				y = m*x + b
-				xys = append(xys, plotter.XY{X: x, Y: y})
+				currentTickAccel = m*x + b
+				accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
 			}
 		}
-		if isParabola == true {
+
+		if segmentIsStraight == true {
 			velo += (a/3)*(math.Pow(segmentLengths[i], 3)) + (b/2)*(math.Pow(segmentLengths[i], 2)) + c*(segmentLengths[i])
 			tiempo += simpson(0.00, float64(segmentLengths[i]), a, b, c, velo, 50)
 		}
-		if isParabola == false {
+		if segmentIsStraight == false {
 			velo += (m/2)*(math.Pow(segmentLengths[i], 2)) + b*(segmentLengths[i])
 			tiempo += simpson(0.00, float64(segmentLengths[i]), 0.00, m, b, velo, 50)
 		}
@@ -124,7 +136,7 @@ func main() {
 
 	p := plot.New()
 
-	lines, err := plotter.NewLine(xys)
+	lines, err := plotter.NewLine(accelPlot)
 	if err != nil {
 		panic(err)
 	}
@@ -155,5 +167,7 @@ func main() {
 	if err := p.Save(4*vg.Inch, 4*vg.Inch, "graph.png"); err != nil {
 		panic(err)
 	}
+
 	fmt.Println("Total time:", tiempo)
+
 }
