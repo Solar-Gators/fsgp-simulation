@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	//"gonum.org/v1/gonum/integrate"
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
@@ -15,10 +16,27 @@ const (
 	graphResolution = 0.001
 )
 
+func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
+	return 1.0 / (q*math.Pow(x, 3) + w*math.Pow(x, 2) + e*x + r)
+}
+func simpson(a float64, b float64, q float64, w float64, e float64, r float64, n float64) float64 {
+	h := (b - a) / n
+	secondpart := 0.00
+	for zz := 1.00; zz <= n/2; zz += 1.00 {
+		secondpart += integrand((a + (2*zz-1)*h), q, w, e, r)
+	}
+	secondpart *= 2.00
+	thirdpart := 0.00
+	for zz := 1.00; zz <= (n/2)-1; zz += 1.00 {
+		thirdpart += integrand((a + (2*zz)*h), q, w, e, r)
+	}
+	thirdpart *= 2.00
+	return ((h / 3.00) * (integrand(a, q, w, e, r) + secondpart + thirdpart + integrand(b, q, w, e, r)))
+}
 func main() {
 	args := os.Args[1:]
 
-  // test command:
+	// test command:
 	// go run . 9 0 1 1 1 1 -10 1
 
 	// Define whether each segment is a parabola (true) or a line (false)
@@ -55,6 +73,12 @@ func main() {
 
 	argIndex := 2
 	xOffset := 0.0
+	tiempo := 0.00
+	velo := initialVelocity
+	a := 0.00
+	b := 0.00
+	c := 0.00
+	m := 0.00
 	for i, isParabola := range piecewiseFunctions {
 		if isParabola {
 			a, _ := strconv.ParseFloat(args[argIndex], 64)
@@ -77,6 +101,15 @@ func main() {
 				xys = append(xys, plotter.XY{X: x, Y: y})
 			}
 		}
+		if isParabola == true {
+			velo += (a/3)*(math.Pow(segmentLengths[i], 3)) + (b/2)*(math.Pow(segmentLengths[i], 2)) + c*(segmentLengths[i])
+			tiempo += simpson(0.00, float64(segmentLengths[i]), a, b, c, velo, 50)
+		}
+		if isParabola == false {
+			velo += (m/2)*(math.Pow(segmentLengths[i], 2)) + b*(segmentLengths[i])
+			tiempo += simpson(0.00, float64(segmentLengths[i]), 0.00, m, b, velo, 50)
+		}
+
 		xOffset += segmentLengths[i]
 	}
 
@@ -113,4 +146,5 @@ func main() {
 	if err := p.Save(4*vg.Inch, 4*vg.Inch, "graph.png"); err != nil {
 		panic(err)
 	}
+	fmt.Println("Total time:", tiempo)
 }
