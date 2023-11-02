@@ -63,14 +63,14 @@ func main() {
 	}
 
 	// Define whether each segment is a straightaway (true) or a turn (false)
-	piecewiseFunctions := []bool{true, false, true, false}
 	segmentLengths := []float64{2, 1, 2, 1}
+	segmentRotation := []float64{0, 180, 0, 180}
 
 	turnCount := 0
 	straightCount := 0
 
-	for _, segmentType := range piecewiseFunctions {
-		if segmentType {
+	for _, segmentType := range segmentRotation {
+		if segmentType == 0 {
 			straightCount++
 		} else {
 			turnCount++
@@ -102,8 +102,8 @@ func main() {
 	c := 0.00
 	m := 0.00
 
-	for i, segmentIsStraight := range piecewiseFunctions {
-		if segmentIsStraight {
+	for i, angle := range segmentRotation {
+		if int(angle) == 0 {
 			a := args[argIndex]
 			argIndex++
 			b := args[argIndex]
@@ -131,11 +131,11 @@ func main() {
 			}
 		}
 
-		if segmentIsStraight == true {
+		if int(angle) == 0 {
 			velo += (a/3)*(math.Pow(segmentLengths[i], 3)) + (b/2)*(math.Pow(segmentLengths[i], 2)) + c*(segmentLengths[i])
 			tiempo += simpson(0.00, float64(segmentLengths[i]), a, b, c, velo, 50)
 		}
-		if segmentIsStraight == false {
+		if int(angle) == 0 {
 			velo += (m/2)*(math.Pow(segmentLengths[i], 2)) + b*(segmentLengths[i])
 			tiempo += simpson(0.00, float64(segmentLengths[i]), 0.00, m, b, velo, 50)
 		}
@@ -195,6 +195,8 @@ func main() {
 
 	accelpo.Add(plotter.NewGrid())
 	velopo.Add(plotter.NewGrid())
+	//given an array of tuples w/ speeds and angles,
+	//draw circle and straightaways with angles and speeds to form a circle given an array of turns [0,180,0,180]
 
 	if err := accelpo.Save(4*vg.Inch, 4*vg.Inch, "graph.png"); err != nil {
 		panic(err)
