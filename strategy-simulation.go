@@ -10,6 +10,9 @@ import (
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
+	"github.com/fogleman/gg"
+	"image/color"
+	"math"
 )
 
 const (
@@ -24,6 +27,28 @@ const (
   to find the time elapsed on the segment, we integrate the right side.
   this is a pretty complicated integral, so i've elected to use an approximation called simpson's method
 */
+func drawTrack(lengths []float64, angles []float64, int currentX, int currentY) {
+	//angle is not absolute - is relative to current direction
+	for i := 0; i < len(lengths); i++{
+		dc := gg.NewContext(100, 100)
+		colour := gg.color.RGBA(255, 255, 0, 255)
+		dc.SetColor(colour)
+		if int(angles[i]) == 0 {
+			//straight
+			dc.DrawLine(currentX, currentY, currentX + lengths[i]*cos(rad(angles[i])), currentY + lengths[i]*(cos(rad(angles[i])))
+		}
+		if int(angles[i]) != 0{
+				//curve
+			int radius = lengths[i]/(2*3.14159265)
+			dc.DrawArc(currentX, currentY, radius, currentAngle, currentAngle + angles[i])
+			}
+		}
+		int currentX += lengths[i]*cos(rad(angles[i]))
+		int currentY += lengths[i]*sin(rad(angles[i]))
+		int currentAngle += angles[i]
+	}
+
+}
 
 // for the following two functions, i use q,w,e,r as arbitrary coefficients. "n" denotes the increments of the approximation
 func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
@@ -45,7 +70,12 @@ func simpson(a float64, b float64, q float64, w float64, e float64, r float64, n
 	return ((h / 3.00) * (integrand(a, q, w, e, r) + secondpart + thirdpart + integrand(b, q, w, e, r)))
 }
 
+
+
 func main() {
+
+	const W = 10
+	const H = 10
 
 	// run command to test:
 	// go run . 9 0 1 1 1 1 -10 1
@@ -65,7 +95,7 @@ func main() {
 	// Define whether each segment is a straightaway (true) or a turn (false)
 	segmentLengths := []float64{2, 1, 2, 1}
 	segmentRotation := []float64{0, 180, 0, 180}
-
+	//drawTrack(segmentLength, segmentRotation)
 	turnCount := 0
 	straightCount := 0
 
