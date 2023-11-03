@@ -7,54 +7,55 @@ import (
 	"strconv"
 
 	//"gonum.org/v1/gonum/integrate"
-	"gonum.org/v1/plot"
-	"gonum.org/v1/plot/plotter"
-	"gonum.org/v1/plot/vg"
 	"github.com/fogleman/gg"
-	"image/color"
-	"math"
 )
 
 const (
 	graphResolution = 0.001
 )
+const (
+	pi = 3.1415926535979
+)
 
 /*
-  so essentially, if, on a given segment of track,
-  our acceleration (i.e., x”) wrt x = some quadratic function of x (i.e. of the form ax^2 + bx + c)
-  then x' = dx/dt = (a/3)x^3 + (b/2)x^2 + cx + initial_velocity
-  thus, we derive dt = dx/[(a/3)x^3 + (b/2)x^2 + cx + initial_velocity]
-  to find the time elapsed on the segment, we integrate the right side.
-  this is a pretty complicated integral, so i've elected to use an approximation called simpson's method
+so essentially, if, on a given segment of track,
+our acceleration (i.e., x”) wrt x = some quadratic function of x (i.e. of the form ax^2 + bx + c)
+then x' = dx/dt = (a/3)x^3 + (b/2)x^2 + cx + initial_velocity
+thus, we derive dt = dx/[(a/3)x^3 + (b/2)x^2 + cx + initial_velocity]
+to find the time elapsed on the segment, we integrate the right side.
+this is a pretty complicated integral, so i've elected to use an approximation called simpson's method
 */
-func drawTrack(lengths []float64, angles []float64, int currentX, int currentY) {
-	//angle is not absolute - is relative to current direction
-	for i := 0; i < len(lengths); i++{
-		dc := gg.NewContext(100, 100)
-		colour := gg.color.RGBA(255, 255, 0, 255)
-		dc.SetColor(colour)
-		if int(angles[i]) == 0 {
+func drawTrack(lengths []float64, angles []float64) {
+	//angle is not absolute - is relative to current direction in radians
+	var currentAngle = 0.0
+	var currentX = 75.0
+	var currentY = 75.0
+	dc := gg.NewContext(250, 250)
+	for i := 0; i < len(lengths); i++ {
+		if int(angles[i]) != 0 {
+			//curve
+			var radius = lengths[i] / angles[i]
+			//use current angle to find it
+			dc.DrawArc(currentX+math.Cos(currentAngle)*radius, currentY+math.Sin(currentAngle)*radius, radius, currentAngle, currentAngle+angles[i])
+		} else {
 			//straight
-			dc.DrawLine(currentX, currentY, currentX + lengths[i]*cos(rad(angles[i])), currentY + lengths[i]*(cos(rad(angles[i])))
+			dc.DrawLine(currentX, currentY, currentX+lengths[i]*math.Cos(angles[i]), currentY+lengths[i]*math.Sin(angles[i]))
+			fmt.Println("OH MAH GAWD NO WAYAYAY")
 		}
-		if int(angles[i]) != 0{
-				//curve
-			int radius = lengths[i]/(2*3.14159265)
-			dc.DrawArc(currentX, currentY, radius, currentAngle, currentAngle + angles[i])
-			}
-		}
-		int currentX += lengths[i]*cos(rad(angles[i]))
-		int currentY += lengths[i]*sin(rad(angles[i]))
-		int currentAngle += angles[i]
-	}
 
+		currentX += lengths[i] * math.Cos(angles[i])
+		currentY += lengths[i] * math.Sin(angles[i])
+		currentAngle += angles[i]
+		dc.SetRGB(50, 50, 0)
+		dc.Stroke()
+	}
+	dc.SavePNG("trackLayout.png")
 }
 
 // for the following two functions, i use q,w,e,r as arbitrary coefficients. "n" denotes the increments of the approximation
 func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
 	return 1.0 / (q*math.Pow(x, 3) + w*math.Pow(x, 2) + e*x + r)
 }
-
 func simpson(a float64, b float64, q float64, w float64, e float64, r float64, n float64) float64 {
 	h := (b - a) / n
 	secondpart := 0.00
@@ -70,8 +71,6 @@ func simpson(a float64, b float64, q float64, w float64, e float64, r float64, n
 	return ((h / 3.00) * (integrand(a, q, w, e, r) + secondpart + thirdpart + integrand(b, q, w, e, r)))
 }
 
-
-
 func main() {
 
 	const W = 10
@@ -79,9 +78,9 @@ func main() {
 
 	// run command to test:
 	// go run . 9 0 1 1 1 1 -10 1
+	//bug in track if angle is less than 1 rad it floor functions to 0 and draws as a straight + drawing circles 90 degrees off
 
 	rawArgs := os.Args[1:]
-
 	args := make([]float64, len(rawArgs))
 	for i, arg := range rawArgs {
 		val, err := strconv.ParseFloat(arg, 64)
@@ -91,12 +90,12 @@ func main() {
 		}
 		args[i] = val
 	}
-
 	// Define whether each segment is a straightaway (true) or a turn (false)
-	segmentLengths := []float64{2, 1, 2, 1}
-	segmentRotation := []float64{0, 180, 0, 180}
-	//drawTrack(segmentLength, segmentRotation)
-	turnCount := 0
+	segmentLengths := []float64{100, 100}
+	segmentRotation := []float64{0, 2}
+
+	drawTrack(segmentLengths, segmentRotation)
+	/*turnCount := 0
 	straightCount := 0
 
 	for _, segmentType := range segmentRotation {
@@ -106,23 +105,18 @@ func main() {
 			turnCount++
 		}
 	}
-
 	// initial velocity, initial acceleration, then accel curve params
 	expectedArgCount := 2 + turnCount + straightCount*2
-
 	if len(rawArgs) != expectedArgCount {
 		fmt.Println("Expected argument count: ", expectedArgCount)
 		os.Exit(1)
 	}
-
 	initialVelocity := args[0]
 	currentTickAccel := args[1]
 	currentTickVelo := args[1]
 	var accelPlot plotter.XYs
 	var veloPlot plotter.XYs
-
 	fmt.Println("initialVelocity: ", initialVelocity)
-
 	argIndex := 2
 	xOffset := 0.0
 	tiempo := 0.00
@@ -131,7 +125,6 @@ func main() {
 	b := 0.00
 	c := 0.00
 	m := 0.00
-
 	for i, angle := range segmentRotation {
 		if int(angle) == 0 {
 			a := args[argIndex]
@@ -140,7 +133,6 @@ func main() {
 			argIndex++
 			c := currentTickAccel - a*math.Pow(xOffset, 2) - b*xOffset
 			d := currentTickVelo - (a/3)*math.Pow(xOffset, 3) - (b/2)*math.Pow(xOffset, 2) - c*xOffset
-
 			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
 				currentTickAccel = a*math.Pow(x, 2) + b*x + c
 				currentTickVelo = (a/3)*math.Pow(x, 3) + (b/2)*math.Pow(x, 2) + c*x + d
@@ -152,7 +144,6 @@ func main() {
 			argIndex++
 			b := currentTickAccel - m*xOffset
 			d := currentTickVelo - (m/2)*math.Pow(xOffset, 2) - b*xOffset
-
 			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
 				currentTickAccel = m*x + b
 				currentTickVelo = (m/2)*math.Pow(x, 2) + b*x + d
@@ -160,7 +151,6 @@ func main() {
 				veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
 			}
 		}
-
 		if int(angle) == 0 {
 			velo += (a/3)*(math.Pow(segmentLengths[i], 3)) + (b/2)*(math.Pow(segmentLengths[i], 2)) + c*(segmentLengths[i])
 			tiempo += simpson(0.00, float64(segmentLengths[i]), a, b, c, velo, 50)
@@ -169,13 +159,10 @@ func main() {
 			velo += (m/2)*(math.Pow(segmentLengths[i], 2)) + b*(segmentLengths[i])
 			tiempo += simpson(0.00, float64(segmentLengths[i]), 0.00, m, b, velo, 50)
 		}
-
 		xOffset += segmentLengths[i]
 	}
-
 	accelpo := plot.New()
 	velopo := plot.New()
-
 	lines, err := plotter.NewLine(accelPlot)
 	if err != nil {
 		panic(err)
@@ -184,15 +171,12 @@ func main() {
 	if err2 != nil {
 		panic(err)
 	}
-
 	accelpo.Add(lines)
 	velopo.Add(lines2)
-
 	accelpo.X.Min = 0
 	accelpo.Y.Min = 0
 	velopo.X.Min = 0
 	velopo.Y.Min = 0
-
 	accelpo.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
 		var ticks []plot.Tick
 		for i := math.Ceil(min); i <= max+1; i++ {
@@ -207,7 +191,6 @@ func main() {
 		}
 		return ticks
 	})
-
 	accelpo.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
 		var ticks []plot.Tick
 		for i := math.Ceil(min); i <= max+1; i++ {
@@ -222,22 +205,18 @@ func main() {
 		}
 		return ticks
 	})
-
 	accelpo.Add(plotter.NewGrid())
 	velopo.Add(plotter.NewGrid())
 	//given an array of tuples w/ speeds and angles,
 	//draw circle and straightaways with angles and speeds to form a circle given an array of turns [0,180,0,180]
-
 	if err := accelpo.Save(4*vg.Inch, 4*vg.Inch, "graph.png"); err != nil {
 		panic(err)
 	}
 	if err2 := accelpo.Save(4*vg.Inch, 4*vg.Inch, "velograph.png"); err != nil {
 		panic(err2)
 	}
-
 	accelpo = plot.New()
 	velopo = plot.New()
-
 	lines, err = plotter.NewLine(accelPlot)
 	if err != nil {
 		panic(err)
@@ -246,6 +225,6 @@ func main() {
 	if err2 != nil {
 		panic(err2)
 	}
-
 	fmt.Println("Total time:", tiempo)
+	*/
 }
