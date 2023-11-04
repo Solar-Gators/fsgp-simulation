@@ -8,6 +8,9 @@ import (
 
 	//"gonum.org/v1/gonum/integrate"
 	"github.com/fogleman/gg"
+	"gonum.org/v1/plot"
+	"gonum.org/v1/plot/plotter"
+	"gonum.org/v1/plot/vg"
 )
 
 const (
@@ -27,27 +30,49 @@ this is a pretty complicated integral, so i've elected to use an approximation c
 */
 func drawTrack(lengths []float64, angles []float64) {
 	//angle is not absolute - is relative to current direction in radians
+	//code can be simplified if turns are input as their true compass direction and not relative to the turn before
 	var currentAngle = 0.0
 	var currentX = 75.0
 	var currentY = 75.0
 	dc := gg.NewContext(250, 250)
 	for i := 0; i < len(lengths); i++ {
-		if int(angles[i]) != 0 {
-			//curve
+		if angles[i] > 0.01 || angles[i] < -0.01 {
+			//curve - .01 rad is tolerance
 			var radius = lengths[i] / angles[i]
 			//use current angle to find it
-			dc.DrawArc(currentX+math.Cos(currentAngle)*radius, currentY+math.Sin(currentAngle)*radius, radius, currentAngle, currentAngle+angles[i])
+			if currentAngle >= -pi/2 && currentAngle < pi/2 {
+				//right
+				//split into negative and positive angles (can prob be simplified later)
+				dc.DrawArc(currentX, currentY+radius, radius, currentAngle+angles[i]/2, -currentAngle-angles[i]/2)
+			} else {
+				//left
+				dc.DrawArc(currentX, currentY-radius, radius, -currentAngle+angles[i]/2, -currentAngle-angles[i]/2)
+			}
+			currentY += 2 * radius
 		} else {
 			//straight
-			dc.DrawLine(currentX, currentY, currentX+lengths[i]*math.Cos(angles[i]), currentY+lengths[i]*math.Sin(angles[i]))
 			fmt.Println("OH MAH GAWD NO WAYAYAY")
+			if currentAngle >= -pi/2 && currentAngle < pi/2 {
+				//right
+				dc.DrawLine(currentX, currentY, currentX+lengths[i]*math.Cos(angles[i]), currentY+lengths[i]*math.Sin(angles[i]))
+				currentX += lengths[i] * math.Cos(angles[i])
+				currentY += lengths[i] * math.Sin(angles[i])
+			} else {
+				//left
+				dc.DrawLine(currentX, currentY, currentX-lengths[i]*math.Cos(angles[i]), currentY-lengths[i]*math.Sin(angles[i]))
+				currentX -= lengths[i] * math.Cos(angles[i])
+				currentY -= lengths[i] * math.Sin(angles[i])
+			}
 		}
-
-		currentX += lengths[i] * math.Cos(angles[i])
-		currentY += lengths[i] * math.Sin(angles[i])
-		currentAngle += angles[i]
 		dc.SetRGB(50, 50, 0)
 		dc.Stroke()
+		currentAngle += angles[i]
+		if currentAngle >= 2*pi {
+			currentAngle -= 2 * pi
+		}
+		if currentAngle <= -2*pi {
+			currentAngle += 2 * pi
+		}
 	}
 	dc.SavePNG("trackLayout.png")
 }
@@ -91,11 +116,11 @@ func main() {
 		args[i] = val
 	}
 	// Define whether each segment is a straightaway (true) or a turn (false)
-	segmentLengths := []float64{100, 100}
-	segmentRotation := []float64{0, 2}
+	segmentLengths := []float64{100, 100, 100, 100}
+	segmentRotation := []float64{0, pi, 0, pi}
 
 	drawTrack(segmentLengths, segmentRotation)
-	/*turnCount := 0
+	turnCount := 0
 	straightCount := 0
 
 	for _, segmentType := range segmentRotation {
@@ -226,5 +251,4 @@ func main() {
 		panic(err2)
 	}
 	fmt.Println("Total time:", tiempo)
-	*/
 }
