@@ -8,9 +8,6 @@ import (
 
 	//"gonum.org/v1/gonum/integrate"
 	"github.com/fogleman/gg"
-	"gonum.org/v1/plot"
-	"gonum.org/v1/plot/plotter"
-	"gonum.org/v1/plot/vg"
 )
 
 const (
@@ -20,14 +17,15 @@ const (
 	pi = 3.1415926535979
 )
 
-/*
-so essentially, if, on a given segment of track,
-our acceleration (i.e., x”) wrt x = some quadratic function of x (i.e. of the form ax^2 + bx + c)
-then x' = dx/dt = (a/3)x^3 + (b/2)x^2 + cx + initial_velocity
-thus, we derive dt = dx/[(a/3)x^3 + (b/2)x^2 + cx + initial_velocity]
-to find the time elapsed on the segment, we integrate the right side.
-this is a pretty complicated integral, so i've elected to use an approximation called simpson's method
-*/
+//type Pattern interface {
+//	ColorAt(x, y int) color.Color
+//}
+//
+//type Gradient interface {
+//	Pattern
+//	AddColorStop(offset float64, color color.Color)
+//}
+
 func drawTrack(lengths []float64, angles []float64) {
 	//angle is not absolute - is relative to current direction in radians
 	//code can be simplified if turns are input as their true compass direction and not relative to the turn before
@@ -39,32 +37,17 @@ func drawTrack(lengths []float64, angles []float64) {
 		if angles[i] > 0.01 || angles[i] < -0.01 {
 			//curve - .01 rad is tolerance
 			var radius = lengths[i] / angles[i]
-			//use current angle to find it
-			if currentAngle >= -pi/2 && currentAngle < pi/2 {
-				//right
-				//split into negative and positive angles (can prob be simplified later)
-				dc.DrawArc(currentX, currentY+radius, radius, currentAngle+angles[i]/2, -currentAngle-angles[i]/2)
-			} else {
-				//left
-				dc.DrawArc(currentX, currentY-radius, radius, -currentAngle+angles[i]/2, -currentAngle-angles[i]/2)
-			}
-			currentY += 2 * radius
+			dc.DrawArc(currentX + math.Cos(-(angles[i]-pi/2)), currentY + math.Sin(-(angles[i]-pi/2)), radius, currentAngle-pi/2, currentAngle+angles[i]-pi/2)
+			currentX += 2 * radius * math.Cos(currentAngle + angles[i])
+			currentY += 2 * radius * math.Sin(currentAngle + angles[i])
 		} else {
 			//straight
-			fmt.Println("OH MAH GAWD NO WAYAYAY")
-			if currentAngle >= -pi/2 && currentAngle < pi/2 {
-				//right
-				dc.DrawLine(currentX, currentY, currentX+lengths[i]*math.Cos(angles[i]), currentY+lengths[i]*math.Sin(angles[i]))
-				currentX += lengths[i] * math.Cos(angles[i])
-				currentY += lengths[i] * math.Sin(angles[i])
-			} else {
-				//left
-				dc.DrawLine(currentX, currentY, currentX-lengths[i]*math.Cos(angles[i]), currentY-lengths[i]*math.Sin(angles[i]))
-				currentX -= lengths[i] * math.Cos(angles[i])
-				currentY -= lengths[i] * math.Sin(angles[i])
-			}
+				dc.DrawLine(currentX, currentY, currentX + lengths[i] * math.Cos(currentAngle), currentY + lengths[i] * math.Sin(currentAngle))
+				currentX += radius * math.Cos(angles[i])
+				currentY += radius * math.Sin(angles[i])
+			} 
 		}
-		dc.SetRGB(50, 50, 0)
+		dc.SetRGB(50, 100, 0)
 		dc.Stroke()
 		currentAngle += angles[i]
 		if currentAngle >= 2*pi {
@@ -77,6 +60,14 @@ func drawTrack(lengths []float64, angles []float64) {
 	dc.SavePNG("trackLayout.png")
 }
 
+/*
+so essentially, if, on a given segment of track,
+our acceleration (i.e., x”) wrt x = some quadratic function of x (i.e. of the form ax^2 + bx + c)
+then x' = dx/dt = (a/3)x^3 + (b/2)x^2 + cx + initial_velocity
+thus, we derive dt = dx/[(a/3)x^3 + (b/2)x^2 + cx + initial_velocity]
+to find the time elapsed on the segment, we integrate the right side.
+this is a pretty complicated integral, so i've elected to use an approximation called simpson's method
+*/
 // for the following two functions, i use q,w,e,r as arbitrary coefficients. "n" denotes the increments of the approximation
 func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
 	return 1.0 / (q*math.Pow(x, 3) + w*math.Pow(x, 2) + e*x + r)
@@ -120,7 +111,7 @@ func main() {
 	segmentRotation := []float64{0, pi, 0, pi}
 
 	drawTrack(segmentLengths, segmentRotation)
-	turnCount := 0
+	/*turnCount := 0
 	straightCount := 0
 
 	for _, segmentType := range segmentRotation {
@@ -250,5 +241,5 @@ func main() {
 	if err2 != nil {
 		panic(err2)
 	}
-	fmt.Println("Total time:", tiempo)
+	fmt.Println("Total time:", tiempo)*/
 }
