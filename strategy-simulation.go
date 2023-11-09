@@ -34,28 +34,27 @@ func drawTrack(lengths []float64, angles []float64) {
 	var currentY = 75.0
 	dc := gg.NewContext(250, 250)
 	for i := 0; i < len(lengths); i++ {
+		var radius = lengths[i] / angles[i]
 		if angles[i] > 0.01 || angles[i] < -0.01 {
 			//curve - .01 rad is tolerance
-			var radius = lengths[i] / angles[i]
-			dc.DrawArc(currentX + math.Cos(-(angles[i]-pi/2)), currentY + math.Sin(-(angles[i]-pi/2)), radius, currentAngle-pi/2, currentAngle+angles[i]-pi/2)
-			currentX += 2 * radius * math.Cos(currentAngle + angles[i])
-			currentY += 2 * radius * math.Sin(currentAngle + angles[i])
+			dc.DrawArc(currentX+math.Cos(-(angles[i]-pi/2)), currentY+math.Sin(-(angles[i]-pi/2)), radius, currentAngle-pi/2, currentAngle+angles[i]-pi/2)
+			currentX += 2 * radius * math.Cos(currentAngle+angles[i])
+			currentY += 2 * radius * math.Sin(currentAngle+angles[i])
 		} else {
 			//straight
-				dc.DrawLine(currentX, currentY, currentX + lengths[i] * math.Cos(currentAngle), currentY + lengths[i] * math.Sin(currentAngle))
-				currentX += radius * math.Cos(angles[i])
-				currentY += radius * math.Sin(angles[i])
-			} 
+			dc.DrawLine(currentX, currentY, currentX+lengths[i]*math.Cos(currentAngle), currentY+lengths[i]*math.Sin(currentAngle))
+			currentX += lengths[i] * math.Cos(angles[i])
+			currentY += lengths[i] * math.Sin(angles[i])
 		}
-		dc.SetRGB(50, 100, 0)
-		dc.Stroke()
-		currentAngle += angles[i]
-		if currentAngle >= 2*pi {
-			currentAngle -= 2 * pi
-		}
-		if currentAngle <= -2*pi {
-			currentAngle += 2 * pi
-		}
+	}
+	dc.SetRGB(50, 100, 0)
+	dc.Stroke()
+	currentAngle += angles[i]
+	if currentAngle >= 2*pi {
+		currentAngle -= 2 * pi
+	}
+	if currentAngle <= -2*pi {
+		currentAngle += 2 * pi
 	}
 	dc.SavePNG("trackLayout.png")
 }
