@@ -85,18 +85,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	initialVelocity := args[0]
+	currentTickVelo := args[0]
 	currentTickAccel := args[1]
-	currentTickVelo := args[1]
+
 	var accelPlot plotter.XYs
 	var veloPlot plotter.XYs
-
-	fmt.Println("initialVelocity: ", initialVelocity)
 
 	argIndex := 2
 	xOffset := 0.0
 	tiempo := 0.00
-	velo := initialVelocity
+	velo := currentTickVelo
 	a := 0.00
 	b := 0.00
 	c := 0.00
@@ -199,7 +197,7 @@ func main() {
 	if err := accelpo.Save(4*vg.Inch, 4*vg.Inch, "graph.png"); err != nil {
 		panic(err)
 	}
-	if err2 := accelpo.Save(4*vg.Inch, 4*vg.Inch, "velograph.png"); err != nil {
+	if err2 := velopo.Save(4*vg.Inch, 4*vg.Inch, "velograph.png"); err != nil {
 		panic(err2)
 	}
 
