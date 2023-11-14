@@ -85,16 +85,16 @@ func main() {
 		os.Exit(1)
 	}
 
-	initialVelocity := args[0]
+	currentTickVelo := args[0]
 	currentTickAccel := args[1]
-	var accelPlot plotter.XYs
 
-	fmt.Println("initialVelocity: ", initialVelocity)
+	var accelPlot plotter.XYs
+	var veloPlot plotter.XYs
 
 	argIndex := 2
 	xOffset := 0.0
 	tiempo := 0.00
-	velo := initialVelocity
+	velo := currentTickVelo
 	a := 0.00
 	b := 0.00
 	c := 0.00
@@ -107,19 +107,25 @@ func main() {
 			b := args[argIndex]
 			argIndex++
 			c := currentTickAccel - a*math.Pow(xOffset, 2) - b*xOffset
+			d := currentTickVelo - (a/3)*math.Pow(xOffset, 3) - (b/2)*math.Pow(xOffset, 2) - c*xOffset
 
 			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
 				currentTickAccel = a*math.Pow(x, 2) + b*x + c
+				currentTickVelo = (a/3)*math.Pow(x, 3) + (b/2)*math.Pow(x, 2) + c*x + d
 				accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
+				veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
 			}
 		} else {
 			m := args[argIndex]
 			argIndex++
 			b := currentTickAccel - m*xOffset
+			d := currentTickVelo - (m/2)*math.Pow(xOffset, 2) - b*xOffset
 
 			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
 				currentTickAccel = m*x + b
+				currentTickVelo = (m/2)*math.Pow(x, 2) + b*x + d
 				accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
+				veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
 			}
 		}
 
@@ -135,40 +141,77 @@ func main() {
 		xOffset += segmentLengths[i]
 	}
 
-	p := plot.New()
+	accelpo := plot.New()
+	velopo := plot.New()
 
 	lines, err := plotter.NewLine(accelPlot)
 	if err != nil {
 		panic(err)
 	}
-
-	p.Add(lines)
-
-	p.X.Min = 0
-	p.Y.Min = 0
-
-	p.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
-		var ticks []plot.Tick
-		for i := math.Ceil(min); i <= max+1; i++ {
-			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
-		}
-		return ticks
-	})
-
-	p.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
-		var ticks []plot.Tick
-		for i := math.Ceil(min); i <= max+1; i++ {
-			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
-		}
-		return ticks
-	})
-
-	p.Add(plotter.NewGrid())
-
-	if err := p.Save(4*vg.Inch, 4*vg.Inch, "graph.png"); err != nil {
+	lines2, err2 := plotter.NewLine(veloPlot)
+	if err2 != nil {
 		panic(err)
 	}
 
-	fmt.Println("Total time:", tiempo)
+	accelpo.Add(lines)
+	velopo.Add(lines2)
 
+	accelpo.X.Min = 0
+	accelpo.Y.Min = 0
+	velopo.X.Min = 0
+	velopo.Y.Min = 0
+
+	accelpo.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Ceil(min); i <= max+1; i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+	velopo.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Ceil(min); i <= max+1; i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+
+	accelpo.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Ceil(min); i <= max+1; i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+	velopo.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Ceil(min); i <= max+1; i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+
+	accelpo.Add(plotter.NewGrid())
+	velopo.Add(plotter.NewGrid())
+
+	if err := accelpo.Save(4*vg.Inch, 4*vg.Inch, "graph.png"); err != nil {
+		panic(err)
+	}
+	if err2 := velopo.Save(4*vg.Inch, 4*vg.Inch, "velograph.png"); err != nil {
+		panic(err2)
+	}
+
+	accelpo = plot.New()
+	velopo = plot.New()
+
+	lines, err = plotter.NewLine(accelPlot)
+	if err != nil {
+		panic(err)
+	}
+	lines2, err2 = plotter.NewLine(accelPlot)
+	if err2 != nil {
+		panic(err2)
+	}
+
+	fmt.Println("Total time:", tiempo)
 }
