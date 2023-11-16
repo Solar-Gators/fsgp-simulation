@@ -156,58 +156,49 @@ func main() {
 	accelpo.Add(lines)
 	velopo.Add(lines2)
 
-	accelpo.X.Min = 0
-	accelpo.Y.Min = 0
-	velopo.X.Min = 0
-	velopo.Y.Min = 0
-
 	accelpo.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
 		var ticks []plot.Tick
-		for i := math.Ceil(min); i <= max+1; i++ {
+		for i := math.Floor(min); i <= math.Ceil(max); i++ {
 			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
 		}
 		return ticks
 	})
-	velopo.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
-		var ticks []plot.Tick
-		for i := math.Ceil(min); i <= max+1; i++ {
-			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
-		}
-		return ticks
-	})
-
 	accelpo.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
 		var ticks []plot.Tick
-		for i := math.Ceil(min); i <= max+1; i++ {
+		for i := math.Floor(min); i <= math.Ceil(max); i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+	accelpo.Add(plotter.NewGrid())
+	if err := accelpo.Save(4*vg.Inch, 4*vg.Inch, "graph.png"); err != nil {
+		panic(err)
+	}
+	accelpo = plot.New()
+	lines, err = plotter.NewLine(accelPlot)
+	if err != nil {
+		panic(err)
+	}
+
+	velopo.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Floor(min); i <= math.Ceil(max); i++ {
 			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
 		}
 		return ticks
 	})
 	velopo.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
 		var ticks []plot.Tick
-		for i := math.Ceil(min); i <= max+1; i++ {
+		for i := math.Floor(min); i <= math.Ceil(max); i++ {
 			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
 		}
 		return ticks
 	})
-
-	accelpo.Add(plotter.NewGrid())
 	velopo.Add(plotter.NewGrid())
-
-	if err := accelpo.Save(4*vg.Inch, 4*vg.Inch, "graph.png"); err != nil {
-		panic(err)
-	}
 	if err2 := velopo.Save(4*vg.Inch, 4*vg.Inch, "velograph.png"); err != nil {
 		panic(err2)
 	}
-
-	accelpo = plot.New()
 	velopo = plot.New()
-
-	lines, err = plotter.NewLine(accelPlot)
-	if err != nil {
-		panic(err)
-	}
 	lines2, err2 = plotter.NewLine(accelPlot)
 	if err2 != nil {
 		panic(err2)
