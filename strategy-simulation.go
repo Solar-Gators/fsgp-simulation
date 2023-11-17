@@ -48,7 +48,7 @@ func simpson(a float64, b float64, q float64, w float64, e float64, r float64, n
 func main() {
 
 	// run command to test:
-	// go run . 9 0 1 1 1 1 -10 1
+	// go run . 9 0 -1 2 -1 0.55 -3.5 -1.4
 
 	rawArgs := os.Args[1:]
 
@@ -204,5 +204,7 @@ func main() {
 		panic(err2)
 	}
 
+	// fmt.Println("First Vel:", veloPlot[0])
+	// fmt.Println("Final Vel:", veloPlot[len(veloPlot)-1])
 	fmt.Println("Total time:", tiempo)
 }
