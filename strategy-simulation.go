@@ -45,6 +45,38 @@ func simpson(a float64, b float64, q float64, w float64, e float64, r float64, n
 	return ((h / 3.00) * (integrand(a, q, w, e, r) + secondpart + thirdpart + integrand(b, q, w, e, r)))
 }
 
+func outputGraph(inputArr plotter.XYs, fileName string) {
+
+	toPlot := plot.New()
+
+	lines, err := plotter.NewLine(inputArr)
+	if err != nil {
+		panic(err)
+	}
+
+	toPlot.Add(lines)
+
+	toPlot.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Floor(min); i <= math.Ceil(max); i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+
+	toPlot.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Floor(min); i <= math.Ceil(max); i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+	toPlot.Add(plotter.NewGrid())
+	if err := toPlot.Save(4*vg.Inch, 4*vg.Inch, fileName); err != nil {
+		panic(err)
+	}
+}
+
 func main() {
 
 	// run command to test:
@@ -141,68 +173,9 @@ func main() {
 		xOffset += segmentLengths[i]
 	}
 
-	accelpo := plot.New()
-	velopo := plot.New()
+	outputGraph(accelPlot, "acceleration.png")
 
-	lines, err := plotter.NewLine(accelPlot)
-	if err != nil {
-		panic(err)
-	}
-	lines2, err2 := plotter.NewLine(veloPlot)
-	if err2 != nil {
-		panic(err)
-	}
-
-	accelpo.Add(lines)
-	velopo.Add(lines2)
-
-	accelpo.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
-		var ticks []plot.Tick
-		for i := math.Floor(min); i <= math.Ceil(max); i++ {
-			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
-		}
-		return ticks
-	})
-	accelpo.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
-		var ticks []plot.Tick
-		for i := math.Floor(min); i <= math.Ceil(max); i++ {
-			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
-		}
-		return ticks
-	})
-	accelpo.Add(plotter.NewGrid())
-	if err := accelpo.Save(4*vg.Inch, 4*vg.Inch, "graph.png"); err != nil {
-		panic(err)
-	}
-	accelpo = plot.New()
-	lines, err = plotter.NewLine(accelPlot)
-	if err != nil {
-		panic(err)
-	}
-
-	velopo.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
-		var ticks []plot.Tick
-		for i := math.Floor(min); i <= math.Ceil(max); i++ {
-			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
-		}
-		return ticks
-	})
-	velopo.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
-		var ticks []plot.Tick
-		for i := math.Floor(min); i <= math.Ceil(max); i++ {
-			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
-		}
-		return ticks
-	})
-	velopo.Add(plotter.NewGrid())
-	if err2 := velopo.Save(4*vg.Inch, 4*vg.Inch, "velograph.png"); err != nil {
-		panic(err2)
-	}
-	velopo = plot.New()
-	lines2, err2 = plotter.NewLine(accelPlot)
-	if err2 != nil {
-		panic(err2)
-	}
+	outputGraph(veloPlot, "velocity.png")
 
 	// fmt.Println("First Vel:", veloPlot[0])
 	// fmt.Println("Final Vel:", veloPlot[len(veloPlot)-1])
