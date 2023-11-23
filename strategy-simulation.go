@@ -154,7 +154,7 @@ func main() {
 	//energy needs to be added below
 	accelpo := plot.New()
 	velopo := plot.New()
-	force := plot.New()
+	forcepo := plot.New()
 	energypo := plot.New()
 
 	lines, err := plotter.NewLine(accelPlot)
@@ -165,10 +165,21 @@ func main() {
 	if err2 != nil {
 		panic(err)
 	}
+	lines3, err3 := plotter.NewLine(forcePlot)
+	if err3 != nil {
+		panic(err)
+	}
+	lines4, err4 := plotter.NewLine(energyPlot)
+	if err4 != nil {
+		panic(err)
+	}
 
 	accelpo.Add(lines)
 	velopo.Add(lines2)
+	forcepo.Add(lines3)
+	energypo.Add(lines4)
 
+	//accel
 	accelpo.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
 		var ticks []plot.Tick
 		for i := math.Floor(min); i <= math.Ceil(max); i++ {
@@ -184,7 +195,7 @@ func main() {
 		return ticks
 	})
 	accelpo.Add(plotter.NewGrid())
-	if err := accelpo.Save(4*vg.Inch, 4*vg.Inch, "graph.png"); err != nil {
+	if err := accelpo.Save(4*vg.Inch, 4*vg.Inch, "accelGraph.png"); err != nil {
 		panic(err)
 	}
 	accelpo = plot.New()
@@ -193,6 +204,7 @@ func main() {
 		panic(err)
 	}
 
+	//velo
 	velopo.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
 		var ticks []plot.Tick
 		for i := math.Floor(min); i <= math.Ceil(max); i++ {
@@ -208,13 +220,63 @@ func main() {
 		return ticks
 	})
 	velopo.Add(plotter.NewGrid())
-	if err2 := velopo.Save(4*vg.Inch, 4*vg.Inch, "velograph.png"); err != nil {
-		panic(err2)
+	if err := velopo.Save(4*vg.Inch, 4*vg.Inch, "veloGraph.png"); err != nil {
+		panic(err)
 	}
 	velopo = plot.New()
-	lines2, err2 = plotter.NewLine(accelPlot)
-	if err2 != nil {
-		panic(err2)
+	lines2, err = plotter.NewLine(veloPlot)
+	if err != nil {
+		panic(err)
+	}
+
+	//force
+	forcepo.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Floor(min); i <= math.Ceil(max); i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+	forcepo.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Floor(min); i <= math.Ceil(max); i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+	forcepo.Add(plotter.NewGrid())
+	if err := forcepo.Save(4*vg.Inch, 4*vg.Inch, "forceGraph.png"); err != nil {
+		panic(err)
+	}
+	forcepo = plot.New()
+	lines3, err = plotter.NewLine(forcePlot)
+	if err != nil {
+		panic(err)
+	}
+
+	//energy
+	energypo.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Floor(min); i <= math.Ceil(max); i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+	energypo.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
+		var ticks []plot.Tick
+		for i := math.Floor(min); i <= math.Ceil(max); i++ {
+			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
+		}
+		return ticks
+	})
+	energypo.Add(plotter.NewGrid())
+	if err := energypo.Save(4*vg.Inch, 4*vg.Inch, "energyLostGraph.png"); err != nil {
+		panic(err)
+	}
+	energypo = plot.New()
+	lines4, err = plotter.NewLine(energyPlot)
+	if err != nil {
+		panic(err)
 	}
 
 	// fmt.Println("First Vel:", veloPlot[0])
