@@ -99,6 +99,7 @@ func main() {
 	c := 0.00
 	m := 0.00
 
+	var totalEnergyLost = 0.0
 	for i, segmentIsStraight := range piecewiseFunctions {
 		//checking different accel and velocity for different curves
 		if segmentIsStraight {
@@ -117,8 +118,9 @@ func main() {
 
 				var currentTickForce = CalculateForce(currentTickVelo)
 				var currentTickEnergy = CalculateWorkDone(currentTickForce, graphResolution)
+				totalEnergyLost += currentTickEnergy
 				forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
-				energyPlot = append(energyPlot, plotter.XY{X: x, Y: currentTickEnergy})
+				energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
 			}
 		} else {
 			m := args[argIndex]
@@ -134,8 +136,9 @@ func main() {
 
 				var currentTickForce = CalculateForce(currentTickVelo)
 				var currentTickEnergy = CalculateWorkDone(currentTickForce, graphResolution)
+				totalEnergyLost += currentTickEnergy
 				forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
-				energyPlot = append(energyPlot, plotter.XY{X: x, Y: currentTickEnergy})
+				energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
 			}
 		}
 
