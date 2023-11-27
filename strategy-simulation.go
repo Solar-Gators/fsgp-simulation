@@ -46,6 +46,25 @@ func simpson(a float64, b float64, q float64, w float64, e float64, r float64, n
 	return ((h / 3.00) * (integrand(a, q, w, e, r) + secondpart + thirdpart + integrand(b, q, w, e, r)))
 }
 
+func outputGraph(inputArr plotter.XYs, fileName string) {
+
+	toPlot := plot.New()
+
+	lines, err := plotter.NewLine(inputArr)
+	if err != nil {
+		panic(err)
+	}
+
+	toPlot.Add(lines)
+
+	toPlot.X.Tick.Marker = plot.DefaultTicks{}
+	toPlot.Y.Tick.Marker = plot.DefaultTicks{}
+	toPlot.Add(plotter.NewGrid())
+	if err := toPlot.Save(4*vg.Inch, 4*vg.Inch, fileName); err != nil {
+		panic(err)
+	}
+}
+
 func main() {
 	rawArgs := os.Args[1:]
 
@@ -154,89 +173,12 @@ func main() {
 		xOffset += segmentLengths[i]
 	}
 
-	//energy needs to be added below
-	accelpo := plot.New()
-	velopo := plot.New()
-	forcepo := plot.New()
-	energypo := plot.New()
+	os.MkdirAll("./plots", 0755)
 
-	lines, err := plotter.NewLine(accelPlot)
-	if err != nil {
-		panic(err)
-	}
-	lines2, err2 := plotter.NewLine(veloPlot)
-	if err2 != nil {
-		panic(err)
-	}
-	lines3, err3 := plotter.NewLine(forcePlot)
-	if err3 != nil {
-		panic(err)
-	}
-	lines4, err4 := plotter.NewLine(energyPlot)
-	if err4 != nil {
-		panic(err)
-	}
-
-	accelpo.Add(lines)
-	velopo.Add(lines2)
-	forcepo.Add(lines3)
-	energypo.Add(lines4)
-
-	//accel
-	accelpo.X.Tick.Marker = plot.DefaultTicks{}
-	accelpo.Y.Tick.Marker = plot.DefaultTicks{}
-
-	accelpo.Add(plotter.NewGrid())
-	if err := accelpo.Save(4*vg.Inch, 4*vg.Inch, "accelGraph.png"); err != nil {
-		panic(err)
-	}
-	accelpo = plot.New()
-	lines, err = plotter.NewLine(accelPlot)
-	if err != nil {
-		panic(err)
-	}
-
-	//velo
-	velopo.X.Tick.Marker = plot.DefaultTicks{}
-	velopo.Y.Tick.Marker = plot.DefaultTicks{}
-
-	velopo.Add(plotter.NewGrid())
-	if err2 := velopo.Save(4*vg.Inch, 4*vg.Inch, "veloGraph.png"); err != nil {
-		panic(err2)
-	}
-	velopo = plot.New()
-	lines2, err2 = plotter.NewLine(accelPlot)
-	if err2 != nil {
-		panic(err2)
-	}
-
-	//force in Newtons
-	forcepo.X.Tick.Marker = plot.DefaultTicks{}
-	forcepo.Y.Tick.Marker = plot.DefaultTicks{}
-
-	forcepo.Add(plotter.NewGrid())
-	if err := forcepo.Save(4*vg.Inch, 4*vg.Inch, "forceGraph.png"); err != nil {
-		panic(err)
-	}
-	forcepo = plot.New()
-	lines3, err = plotter.NewLine(forcePlot)
-	if err != nil {
-		panic(err)
-	}
-
-	//Energy in Joules
-	energypo.X.Tick.Marker = plot.DefaultTicks{}
-	energypo.Y.Tick.Marker = plot.DefaultTicks{}
-
-	energypo.Add(plotter.NewGrid())
-	if err := energypo.Save(4*vg.Inch, 4*vg.Inch, "energyLostGraph.png"); err != nil {
-		panic(err)
-	}
-	energypo = plot.New()
-	lines4, err = plotter.NewLine(energyPlot)
-	if err != nil {
-		panic(err)
-	}
+	outputGraph(accelPlot, "./plots/acceleration.png")
+	outputGraph(veloPlot, "./plots/velocity.png")
+	outputGraph(forcePlot, "./plots/force.png")
+	outputGraph(energyPlot, "./plots/energy.png")
 
 	// fmt.Println("First Vel:", veloPlot[0])
 	// fmt.Println("Final Vel:", veloPlot[len(veloPlot)-1])
