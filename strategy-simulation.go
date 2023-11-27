@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	//"gonum.org/v1/gonum/integrate"
+	// go run . 9 0 -1 2 -1 0.55 -3.5 -1.4
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
@@ -16,16 +16,17 @@ const (
 	graphResolution = 0.001
 )
 
-/*
-  so essentially, if, on a given segment of track,
-  our acceleration (i.e., x”) wrt x = some quadratic function of x (i.e. of the form ax^2 + bx + c)
-  then x' = dx/dt = (a/3)x^3 + (b/2)x^2 + cx + initial_velocity
-  thus, we derive dt = dx/[(a/3)x^3 + (b/2)x^2 + cx + initial_velocity]
-  to find the time elapsed on the segment, we integrate the right side.
-  this is a pretty complicated integral, so i've elected to use an approximation called simpson's method
-*/
+// CalculateForce calculates the force based on the given velocity.
+func CalculateForce(velocity float64) float64 {
+	var dragCoefficient = 1.0
+	return dragCoefficient * math.Pow(velocity, 2)
+}
 
-// for the following two functions, i use q,w,e,r as arbitrary coefficients. "n" denotes the increments of the approximation
+// CalculateWorkDone calculates the work done by a force over a segment.
+func CalculateWorkDone(force float64, distance float64) float64 {
+	return force * distance
+}
+
 func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
 	return 1.0 / (q*math.Pow(x, 3) + w*math.Pow(x, 2) + e*x + r)
 }
@@ -56,21 +57,8 @@ func outputGraph(inputArr plotter.XYs, fileName string) {
 
 	toPlot.Add(lines)
 
-	toPlot.X.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
-		var ticks []plot.Tick
-		for i := math.Floor(min); i <= math.Ceil(max); i++ {
-			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
-		}
-		return ticks
-	})
-
-	toPlot.Y.Tick.Marker = plot.TickerFunc(func(min, max float64) []plot.Tick {
-		var ticks []plot.Tick
-		for i := math.Floor(min); i <= math.Ceil(max); i++ {
-			ticks = append(ticks, plot.Tick{Value: i, Label: fmt.Sprintf("%.0f", i)})
-		}
-		return ticks
-	})
+	toPlot.X.Tick.Marker = plot.DefaultTicks{}
+	toPlot.Y.Tick.Marker = plot.DefaultTicks{}
 	toPlot.Add(plotter.NewGrid())
 	if err := toPlot.Save(4*vg.Inch, 4*vg.Inch, fileName); err != nil {
 		panic(err)
@@ -78,10 +66,6 @@ func outputGraph(inputArr plotter.XYs, fileName string) {
 }
 
 func main() {
-
-	// run command to test:
-	// go run . 9 0 -1 2 -1 0.55 -3.5 -1.4
-
 	rawArgs := os.Args[1:]
 
 	args := make([]float64, len(rawArgs))
@@ -122,6 +106,8 @@ func main() {
 
 	var accelPlot plotter.XYs
 	var veloPlot plotter.XYs
+	var forcePlot plotter.XYs
+	var energyPlot plotter.XYs
 
 	argIndex := 2
 	xOffset := 0.0
@@ -132,7 +118,9 @@ func main() {
 	c := 0.00
 	m := 0.00
 
+	var totalEnergyLost = 0.0
 	for i, segmentIsStraight := range piecewiseFunctions {
+		//checking different accel and velocity for different curves
 		if segmentIsStraight {
 			a := args[argIndex]
 			argIndex++
@@ -146,6 +134,12 @@ func main() {
 				currentTickVelo = (a/3)*math.Pow(x, 3) + (b/2)*math.Pow(x, 2) + c*x + d
 				accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
 				veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
+
+				var currentTickForce = CalculateForce(currentTickVelo)
+				var currentTickEnergy = CalculateWorkDone(currentTickForce, graphResolution)
+				totalEnergyLost += currentTickEnergy
+				forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
+				energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
 			}
 		} else {
 			m := args[argIndex]
@@ -158,6 +152,12 @@ func main() {
 				currentTickVelo = (m/2)*math.Pow(x, 2) + b*x + d
 				accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
 				veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
+
+				var currentTickForce = CalculateForce(currentTickVelo)
+				var currentTickEnergy = CalculateWorkDone(currentTickForce, graphResolution)
+				totalEnergyLost += currentTickEnergy
+				forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
+				energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
 			}
 		}
 
@@ -173,9 +173,12 @@ func main() {
 		xOffset += segmentLengths[i]
 	}
 
-	outputGraph(accelPlot, "acceleration.png")
+	os.MkdirAll("./plots", 0755)
 
-	outputGraph(veloPlot, "velocity.png")
+	outputGraph(accelPlot, "./plots/acceleration.png")
+	outputGraph(veloPlot, "./plots/velocity.png")
+	outputGraph(forcePlot, "./plots/force.png")
+	outputGraph(energyPlot, "./plots/energy.png")
 
 	// fmt.Println("First Vel:", veloPlot[0])
 	// fmt.Println("Final Vel:", veloPlot[len(veloPlot)-1])
