@@ -2,14 +2,19 @@ from scipy.optimize import minimize
 import subprocess
 import sys
 
-cli_program = "./strategy-simulation"
+cli_program = "./strategy-simulation.exe"
+
 
 # Call CLI program and return output
 def call_cli_program(x):
-    return subprocess.run([cli_program] + list(map(str, x)), capture_output=True, text=True).stdout
+    return subprocess.run(
+        [cli_program] + list(map(str, x)), capture_output=True, text=True
+    ).stdout
+
 
 # Cache to store the output for the current x to avoid redundant CLI calls
 output_cache = {}
+
 
 # Function to get the output from cache or CLI call
 def get_output(x):
@@ -19,47 +24,83 @@ def get_output(x):
         output_cache[x_tuple] = call_cli_program(x)
     return output_cache[x_tuple]
 
+
 # Objective function
 def objective(x):
     output = get_output(x)
     try:
         time_elapsed = float(output.split("Time Elapsed (s):")[1].split("\n")[0])
-        return time_elapsed if time_elapsed != float('inf') else sys.float_info.max
+        return (
+            time_elapsed
+            if (time_elapsed != float("inf") or time_elapsed < 0)
+            else sys.float_info.max
+        )
     except ValueError:
         return sys.float_info.max
+
 
 # Constraint function for energy consumption
 def constraint_energy(x):
     output = get_output(x)
-    energy_consumption = float(output.split("Energy Consumption (W):")[1].split("\n")[0])
+    energy_consumption = float(
+        output.split("Energy Consumption (W):")[1].split("\n")[0]
+    )
     # Return non-negative if constraint is satisfied, negative otherwise
+    if energy_consumption < 0:
+        return -1
+
     return 5000 - energy_consumption
+
 
 # Constraint function for initial and final velocity
 def constraint_velocity(x):
     output = get_output(x)
-    acceptable_difference = 5.0  # 5% difference threshold
+    acceptable_difference = 2.0  # in %
     max_velocity = 40.0  # Maximum allowed velocity
     initial_velocity = float(output.split("Initial Velocity (m/s):")[1].split("\n")[0])
     final_velocity = float(output.split("Final Velocity (m/s):")[1].split("\n")[0])
 
-    # Return negative if velocities are greater than max_velocity
-    if initial_velocity > max_velocity or final_velocity > max_velocity:
-        return -1  
+    # Check if either velocity is outside the acceptable range [0, max_velocity]
+    if not (0 <= initial_velocity <= max_velocity) or not (
+        0 <= final_velocity <= max_velocity
+    ):
+        return -1
 
-    velocity_difference = abs(initial_velocity - final_velocity) / max(initial_velocity, final_velocity) * 100
-    # Return non-negative if constraint is satisfied, negative otherwise
-    return acceptable_difference - velocity_difference
+    # Calculate the percentage difference between the initial and final velocities
+    if initial_velocity == final_velocity == 0:
+        # If both velocities are zero, there is no difference
+        velocity_difference = 0
+    else:
+        # Otherwise, calculate the difference as a percentage
+        velocity_difference = (
+            abs(initial_velocity - final_velocity)
+            / max(initial_velocity, final_velocity)
+            * 100
+        )
+
+    # Check if the difference is within the acceptable limit
+    if velocity_difference > acceptable_difference:
+        return -1
+
+    # If all constraints are satisfied, return 0 or a positive value
+    return 0
+
 
 # Initial guess
-x0 = [0.05]*8
+x0 = [0.01] * 8
 
 # Define the constraints
-con1 = {'type': 'ineq', 'fun': constraint_energy}
-con2 = {'type': 'ineq', 'fun': constraint_velocity}
+con1 = {"type": "ineq", "fun": constraint_energy}
+con2 = {"type": "ineq", "fun": constraint_velocity}
 
 # Solve the optimization problem
-res = minimize(objective, x0, method='SLSQP', constraints=[con1, con2], options={'disp': True, 'maxiter': 80})
+res = minimize(
+    objective,
+    x0,
+    method="SLSQP",
+    constraints=[con1, con2],
+    options={"disp": True, "maxiter": 50},
+)
 
 print(res.x)
 print()
