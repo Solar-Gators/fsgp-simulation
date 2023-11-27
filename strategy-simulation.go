@@ -12,9 +12,7 @@ import (
 	"gonum.org/v1/plot/vg"
 )
 
-const (
-	graphResolution = 0.001
-)
+const ()
 
 // CalculateForce calculates the force based on the given velocity.
 func CalculateForce(velocity float64) float64 {
@@ -66,6 +64,12 @@ func outputGraph(inputArr plotter.XYs, fileName string) {
 }
 
 func main() {
+
+	// Define whether each segment is a straightaway (true) or a turn (false)
+	piecewiseFunctions := []bool{true, false, true, false}
+	segmentLengths := []float64{400, 200, 400, 200}
+	var graphResolution float64 = 0.001
+
 	rawArgs := os.Args[1:]
 
 	args := make([]float64, len(rawArgs))
@@ -78,20 +82,21 @@ func main() {
 		args[i] = val
 	}
 
-	// Define whether each segment is a straightaway (true) or a turn (false)
-	piecewiseFunctions := []bool{true, false, true, false}
-	segmentLengths := []float64{2, 1, 2, 1}
-
 	turnCount := 0
 	straightCount := 0
 
-	for _, segmentType := range piecewiseFunctions {
+	var totalLength float64 = 0
+
+	for i, segmentType := range piecewiseFunctions {
 		if segmentType {
 			straightCount++
 		} else {
 			turnCount++
 		}
+		totalLength += segmentLengths[i]
 	}
+
+	graphResolution *= totalLength
 
 	// initial velocity, initial acceleration, then accel curve params
 	expectedArgCount := 2 + turnCount + straightCount*2
@@ -175,11 +180,13 @@ func main() {
 
 	os.MkdirAll("./plots", 0755)
 
-	outputGraph(accelPlot, "./plots/acceleration.png")
-	outputGraph(veloPlot, "./plots/velocity.png")
-	outputGraph(forcePlot, "./plots/force.png")
-	outputGraph(energyPlot, "./plots/energy.png")
+	outputGraph(accelPlot, "./plots/1_acceleration.png")
+	outputGraph(veloPlot, "./plots/2_velocity.png")
+	outputGraph(forcePlot, "./plots/3_force.png")
+	outputGraph(energyPlot, "./plots/4_energy.png")
 
+	fmt.Println("Initial Velocity (m/s):", veloPlot[0].Y)
+	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
 	fmt.Println("Time Elapsed (s): ", tiempo)
 	fmt.Println("Energy Consumed (J): ", energyPlot[len(energyPlot)-1].Y)
 	fmt.Println("Energy Consumption (W): ", energyPlot[len(energyPlot)-1].Y/tiempo)
