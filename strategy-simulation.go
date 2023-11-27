@@ -180,7 +180,7 @@ func main() {
 	outputGraph(forcePlot, "./plots/force.png")
 	outputGraph(energyPlot, "./plots/energy.png")
 
-	// fmt.Println("First Vel:", veloPlot[0])
-	// fmt.Println("Final Vel:", veloPlot[len(veloPlot)-1])
-	fmt.Println("Total time:", tiempo)
+	fmt.Println("Time Elapsed (s): ", tiempo)
+	fmt.Println("Energy Consumed (J): ", energyPlot[len(energyPlot)-1].Y)
+	fmt.Println("Energy Consumption (W): ", energyPlot[len(energyPlot)-1].Y/tiempo)
 }
