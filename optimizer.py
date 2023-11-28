@@ -46,12 +46,7 @@ def constraint_energy(x):
         output.split("Energy Consumption (W):")[1].split("\n")[0]
     )
     # Return non-negative if constraint is satisfied, negative otherwise
-    if energy_consumption < 0:
-        return -1
-
-    if energy_consumption > 5000:
-        return -1
-    return 0
+    return 5000 - energy_consumption
 
 
 # Constraint function for initial and final velocity
@@ -59,7 +54,7 @@ def constraint_velocity(x):
     output = get_output(x)
 
     # in %
-    acceptable_difference = 2.0
+    acceptable_difference = 0.5
 
     max_velocity = 40.0  # Maximum allowed velocity
     initial_velocity = float(output.split("Initial Velocity (m/s):")[1].split("\n")[0])
@@ -82,28 +77,23 @@ def constraint_velocity(x):
             * 100
         )
 
-    # Check if the difference is within the acceptable limit
-    if velocity_difference > acceptable_difference:
-        return -1
+    # Constraint is satisfied if the difference is less than or equal to the acceptable limit
+    return acceptable_difference - abs(velocity_difference)
 
-    # If all constraints are satisfied, return 0 or a positive value
-    return 0
 
+# Define the constraints
+con1 = {"type": "ineq", "fun": constraint_energy}
+con2 = {"type": "ineq", "fun": constraint_velocity}
 
 # Initial guess
 x0 = [9, 0, -1, 2, -1, 0.55, -3.5, -1.4]
-
-# Define the constraints
-con1 = {"type": "eq", "fun": constraint_energy}
-con2 = {"type": "eq", "fun": constraint_velocity}
 
 # Solve the optimization problem
 res = minimize(
     objective,
     x0,
-    method="SLSQP",
     constraints=[con1, con2],
-    options={"disp": True, "maxiter": 20},
+    options={"disp": True, "maxiter": 50},
 )
 
 print(res.x)
