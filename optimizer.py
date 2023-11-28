@@ -1,9 +1,9 @@
 import subprocess
 import sys
-from mystic.solvers import fmin
-from mystic.monitors import VerboseMonitor
-from mystic.constraints import as_constraint, and_
-from mystic.symbolic import generate_constraint, generate_solvers, simplify
+from mystic.solvers import *
+from mystic.monitors import *
+from mystic.constraints import *
+from mystic.symbolic import *
 
 
 cli_program = "./strategy-simulation.exe"
@@ -28,60 +28,51 @@ def get_output(x):
     return output_cache[x_tuple]
 
 
-# Objective function
+# Objective function with constraints
 def objective(x):
+    # in %
+    acceptable_difference = 0.5
+    max_velocity = 40.0
+
     output = get_output(x)
     try:
+        # Parse the output for the required values
         time_elapsed = float(output.split("Time Elapsed (s):")[1].split("\n")[0])
+        energy_consumption = float(
+            output.split("Energy Consumption (W):")[1].split("\n")[0]
+        )
+        initial_velocity = float(
+            output.split("Initial Velocity (m/s):")[1].split("\n")[0]
+        )
+        final_velocity = float(output.split("Final Velocity (m/s):")[1].split("\n")[0])
+
+        # Check energy consumption constraint
+        if energy_consumption > 5000 or energy_consumption < 0:
+            return sys.float_info.max
+
+        # Check velocity constraints
+        if not (0 < initial_velocity < max_velocity) or not (
+            0 < final_velocity < max_velocity
+        ):
+            return sys.float_info.max
+
+        # Check the percentage difference constraint
+        velocity_difference = abs(final_velocity - initial_velocity)
+        if (
+            velocity_difference / max(initial_velocity, final_velocity)
+            > acceptable_difference / 100
+        ):
+            return sys.float_info.max
+
+        # If all constraints are satisfied, return the time elapsed
         return (
             time_elapsed
-            if time_elapsed != float("inf") or time_elapsed < 0
+            if time_elapsed != float("inf") and time_elapsed >= 0
             else sys.float_info.max
         )
     except ValueError:
+        # If parsing fails, return max float value as penalty
         return sys.float_info.max
-
-
-# Constraint function for energy consumption
-def constraint_energy(x):
-    output = get_output(x)
-    energy_consumption = float(
-        output.split("Energy Consumption (W):")[1].split("\n")[0]
-    )
-    # Return non-negative if constraint is satisfied, negative otherwise
-    return 5000 - energy_consumption
-
-
-# Constraint function for initial and final velocity
-def constraint_velocity(x):
-    output = get_output(x)
-
-    # in %
-    acceptable_difference = 0.5
-
-    max_velocity = 40.0  # Maximum allowed velocity
-    initial_velocity = float(output.split("Initial Velocity (m/s):")[1].split("\n")[0])
-    final_velocity = float(output.split("Final Velocity (m/s):")[1].split("\n")[0])
-
-    # Check if either velocity is outside the acceptable range [0, max_velocity]
-    if initial_velocity < 0 or initial_velocity > max_velocity:
-        return -1
-    if final_velocity < 0 or final_velocity > max_velocity:
-        return -1
-
-    # Calculate the percentage difference between the initial and final velocities
-    if initial_velocity == final_velocity == 0:
-        velocity_difference = 0
-    else:
-        # Otherwise, calculate the difference as a percentage
-        velocity_difference = (
-            abs(initial_velocity - final_velocity)
-            / max(initial_velocity, final_velocity)
-            * 100
-        )
-
-    # Constraint is satisfied if the difference is less than or equal to the acceptable limit
-    return acceptable_difference - abs(velocity_difference)
 
 
 mon = VerboseMonitor(10)
@@ -100,7 +91,7 @@ res = fmin(
     objective,
     x0,
     disp=True,
-    maxiter=70,
+    maxiter=200,
     callback=custom_callback,
 )
 
