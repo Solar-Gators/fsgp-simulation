@@ -1,6 +1,8 @@
-from scipy.optimize import minimize
 import subprocess
 import sys
+from mystic.solvers import fmin
+from mystic.monitors import VerboseMonitor
+from mystic.penalty import quadratic_inequality
 
 cli_program = "./strategy-simulation.exe"
 
@@ -18,7 +20,6 @@ output_cache = {}
 
 # Function to get the output from cache or CLI call
 def get_output(x):
-    # Convert x to a tuple to use it as a dictionary key (lists are not hashable)
     x_tuple = tuple(x)
     if x_tuple not in output_cache:
         output_cache[x_tuple] = call_cli_program(x)
@@ -45,60 +46,88 @@ def constraint_energy(x):
     energy_consumption = float(
         output.split("Energy Consumption (W):")[1].split("\n")[0]
     )
-    # Return non-negative if constraint is satisfied, negative otherwise
+    # Return positive if constraint is satisfied and negative if not
     return 5000 - energy_consumption
 
 
 # Constraint function for initial and final velocity
 def constraint_velocity(x):
     output = get_output(x)
-
-    # in %
     acceptable_difference = 0.5
-
-    max_velocity = 40.0  # Maximum allowed velocity
+    max_velocity = 40.0
     initial_velocity = float(output.split("Initial Velocity (m/s):")[1].split("\n")[0])
     final_velocity = float(output.split("Final Velocity (m/s):")[1].split("\n")[0])
 
-    # Check if either velocity is outside the acceptable range [0, max_velocity]
-    if initial_velocity < 0 or initial_velocity > max_velocity:
-        return -1
-    if final_velocity < 0 or final_velocity > max_velocity:
+    # Penalize if velocities are out of bounds
+    if (
+        initial_velocity < 0
+        or initial_velocity > max_velocity
+        or final_velocity < 0
+        or final_velocity > max_velocity
+    ):
         return -1
 
-    # Calculate the percentage difference between the initial and final velocities
+    # Penalize if the velocity difference percentage is too high
     if initial_velocity == final_velocity == 0:
-        velocity_difference = 0
+        velocity_difference_percentage = 0
     else:
-        # Otherwise, calculate the difference as a percentage
-        velocity_difference = (
+        velocity_difference_percentage = (
             abs(initial_velocity - final_velocity)
             / max(initial_velocity, final_velocity)
             * 100
         )
+    if velocity_difference_percentage > acceptable_difference:
+        return acceptable_difference - velocity_difference_percentage
 
-    # Constraint is satisfied if the difference is less than or equal to the acceptable limit
-    return acceptable_difference - abs(velocity_difference)
+    return 0  # No penalty if within acceptable bounds
 
 
-# Define the constraints
-con1 = {"type": "ineq", "fun": constraint_energy}
-con2 = {"type": "ineq", "fun": constraint_velocity}
+# Combine penalties
+def total_penalty(x):
+    return penalty_energy(x) + penalty_velocity(x)
+
+
+# Define the penalty functions using mystic's penalty method
+@quadratic_inequality(constraint_energy)
+def penalty_energy(x):
+    return 0.0
+
+
+@quadratic_inequality(constraint_velocity)
+def penalty_velocity(x):
+    return 0.0
+
+
+# Combine penalties
+def total_penalty(x):
+    return penalty_energy(x) + penalty_velocity(x)
+
 
 # Initial guess
 x0 = [9, 0, -1, 2, -1, 0.55, -3.5, -1.4]
 
-# Solve the optimization problem
-res = minimize(
+# Use VerboseMonitor to get the convergence information
+mon = VerboseMonitor(10)
+
+
+# Custom callback function
+def custom_callback(x):
+    y = objective(x)  # Compute the objective function value
+    mon(x, y)  # Call the VerboseMonitor with both x and y
+
+
+# Solve the optimization problem using the custom callback
+res = fmin(
     objective,
     x0,
-    constraints=[con1, con2],
-    options={"disp": True, "maxiter": 50},
+    penalty=total_penalty,  # Pass the combined penalty function
+    disp=True,
+    maxiter=100,
+    callback=custom_callback,  # Use the custom callback function
 )
 
-print(res.x)
-print()
+print(res)
 
 # Clear output_cache to ensure fresh output for final call
 output_cache.clear()
-print(call_cli_program(res.x))
+print(call_cli_program(res))
