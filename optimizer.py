@@ -70,7 +70,7 @@ def objective(x):
             if time_elapsed != float("inf") and time_elapsed >= 0
             else sys.float_info.max
         )
-    except ValueError:
+    except (ValueError, IndexError):
         # If parsing fails, return max float value as penalty
         return sys.float_info.max
 
@@ -91,7 +91,7 @@ res = fmin(
     objective,
     x0,
     disp=True,
-    maxiter=200,
+    maxiter=2000,
     callback=custom_callback,
 )
 
