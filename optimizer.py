@@ -31,7 +31,7 @@ def get_output(x):
 # Objective function with constraints
 def objective(x):
     # in %
-    acceptable_difference = 0.5
+    acceptable_difference = 0.05
     max_velocity = 40.0
 
     output = get_output(x)
@@ -47,7 +47,7 @@ def objective(x):
         final_velocity = float(output.split("Final Velocity (m/s):")[1].split("\n")[0])
 
         # Check energy consumption constraint
-        if energy_consumption > 5000 or energy_consumption < 0:
+        if energy_consumption > 1300 or energy_consumption < 0:
             return sys.float_info.max
 
         # Check velocity constraints
@@ -91,7 +91,7 @@ res = fmin(
     objective,
     x0,
     disp=True,
-    maxiter=2000,
+    maxiter=1000,
     callback=custom_callback,
 )
 
