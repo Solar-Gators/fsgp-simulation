@@ -76,8 +76,10 @@ func main() {
 	for i, arg := range rawArgs {
 		val, err := strconv.ParseFloat(arg, 64)
 		if err != nil {
-			fmt.Println(err)
-			return
+			if i != len(rawArgs)-1 {
+				fmt.Println(err)
+				return
+			}
 		}
 		args[i] = val
 	}
@@ -101,7 +103,7 @@ func main() {
 	// initial velocity, initial acceleration, then accel curve params
 	expectedArgCount := 2 + turnCount + straightCount*2
 
-	if len(rawArgs) != expectedArgCount {
+	if len(rawArgs) != expectedArgCount && len(rawArgs) != expectedArgCount+1 {
 		fmt.Println("Expected argument count: ", expectedArgCount)
 		os.Exit(1)
 	}
@@ -178,12 +180,21 @@ func main() {
 		xOffset += segmentLengths[i]
 	}
 
-	os.MkdirAll("./plots", 0755)
+	var hasEndArg bool = len(rawArgs) > expectedArgCount
 
-	outputGraph(accelPlot, "./plots/1_acceleration.png")
-	outputGraph(veloPlot, "./plots/2_velocity.png")
-	outputGraph(forcePlot, "./plots/3_force.png")
-	outputGraph(energyPlot, "./plots/4_energy.png")
+	if !hasEndArg || rawArgs[len(rawArgs)-1] != "none" {
+		os.MkdirAll("./plots", 0755)
+
+		var iterationNum = ""
+		if hasEndArg {
+			iterationNum = rawArgs[len(rawArgs)-1] + "_"
+		}
+
+		outputGraph(accelPlot, "./plots/"+iterationNum+"acceleration.png")
+		outputGraph(veloPlot, "./plots/"+iterationNum+"velocity.png")
+		outputGraph(forcePlot, "./plots/"+iterationNum+"force.png")
+		outputGraph(energyPlot, "./plots/"+iterationNum+"energy.png")
+	}
 
 	fmt.Println("Initial Velocity (m/s):", veloPlot[0].Y)
 	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
