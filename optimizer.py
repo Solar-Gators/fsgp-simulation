@@ -10,6 +10,9 @@ from mystic.symbolic import *
 NUM_ARGUMENTS = 8
 CALLS_BETWEEN_IMAGE = 20
 
+MAX_VELOCITY = 40.0
+MAX_ENERGY_CONS = 1300
+
 try:
     subprocess.run(["go", "build", "."])
 except:
@@ -54,8 +57,6 @@ def get_output(x):
 # Objective function with constraints
 def objective(x):
     # in %
-    acceptable_difference = 0.05
-    max_velocity = 40.0
 
     output = get_output(x)
     try:
@@ -70,22 +71,19 @@ def objective(x):
         final_velocity = float(output.split("Final Velocity (m/s):")[1].split("\n")[0])
 
         # Check energy consumption constraint
-        if energy_consumption > 1300 or energy_consumption < 0:
-            return sys.float_info.max
+        if energy_consumption > MAX_ENERGY_CONS or energy_consumption < 0:
+            time_elapsed += abs(energy_consumption - MAX_ENERGY_CONS) ** 2
 
         # Check velocity constraints
-        if not (0 < initial_velocity < max_velocity) or not (
-            0 < final_velocity < max_velocity
-        ):
-            return sys.float_info.max
+        if initial_velocity > MAX_VELOCITY or initial_velocity < 0:
+            time_elapsed += abs(initial_velocity - MAX_VELOCITY) ** 2
+
+        if final_velocity > MAX_VELOCITY or final_velocity < 0:
+            time_elapsed += abs(final_velocity - MAX_VELOCITY) ** 2
 
         # Check the percentage difference constraint
         velocity_difference = abs(final_velocity - initial_velocity)
-        if (
-            velocity_difference / max(initial_velocity, final_velocity)
-            > acceptable_difference / 100
-        ):
-            return sys.float_info.max
+        time_elapsed += abs(velocity_difference) ** 2
 
         # If all constraints are satisfied, return the time elapsed
         return (
