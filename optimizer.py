@@ -1,12 +1,23 @@
 import subprocess
+import platform
 import sys
+import os
 from mystic.solvers import *
 from mystic.monitors import *
 from mystic.constraints import *
 from mystic.symbolic import *
 
+NUM_ARGUMENTS = 8
 
-cli_program = "./strategy-simulation.exe"
+try:
+    subprocess.run(["go", "build", "."])
+except:
+    print("Ensure Go is installed! Using binaries...\n")
+
+if platform.system() == "Windows":
+    cli_program = "./strategy-simulation.exe"
+else:
+    cli_program = "./strategy-simulation"
 
 
 # Call CLI program and return output
@@ -84,14 +95,15 @@ def custom_callback(x):
 
 
 # Initial guess
-x0 = [9, 0, -1, 2, -1, 0.55, -3.5, -1.4]
+x0 = [0] * NUM_ARGUMENTS
+x0[0] = 1
 
 # Solve the optimization problem using the constraints
 res = fmin(
     objective,
     x0,
     disp=True,
-    maxiter=1000,
+    maxiter=2000,
     callback=custom_callback,
 )
 
