@@ -8,7 +8,7 @@ from mystic.constraints import *
 from mystic.symbolic import *
 
 NUM_ARGUMENTS = 8
-OVERWRITE_IMAGES = True
+CALLS_BETWEEN_IMAGE = 20
 
 try:
     subprocess.run(["go", "build", "."])
@@ -33,11 +33,18 @@ def call_cli_program(x, endArg):
 # Cache to store the output for the current x to avoid redundant CLI calls
 output_cache = {}
 
-autoEndArg = "none"
+
+i = 0
 
 
 # Function to get the output from cache or CLI call
 def get_output(x):
+    global i
+    if i % CALLS_BETWEEN_IMAGE == 0:
+        autoEndArg = ""
+    else:
+        autoEndArg = "none"
+    i += 1
     x_tuple = tuple(x)
     if x_tuple not in output_cache:
         output_cache[x_tuple] = call_cli_program(x, autoEndArg)
@@ -93,21 +100,8 @@ def objective(x):
 
 mon = VerboseMonitor(10)
 
-i = 0
-
 
 def custom_callback(x):
-    global i
-    global autoEndArg
-    i += 1
-    if i % 10 == 0:
-        if OVERWRITE_IMAGES:
-            autoEndArg = ""
-        else:
-            autoEndArg = str(int(i / 10))
-    else:
-        autoEndArg = "none"
-
     y = objective(x)
     mon(x, y)
 
@@ -117,7 +111,7 @@ x0 = [0] * NUM_ARGUMENTS
 x0[0] = 1
 
 # Solve the optimization problem using the constraints
-res = fmin(
+res = fmin_powell(
     objective,
     x0,
     disp=True,
@@ -127,4 +121,4 @@ res = fmin(
 
 print(res)
 output_cache.clear()
-print(call_cli_program(res, "final"))
+print(call_cli_program(res, ""))
