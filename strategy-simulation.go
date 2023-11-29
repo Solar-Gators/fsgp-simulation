@@ -67,7 +67,7 @@ func main() {
 
 	// Define whether each segment is a straightaway (true) or a turn (false)
 	piecewiseFunctions := []bool{true, false, true, false}
-	segmentLengths := []float64{400, 200, 400, 200}
+	segmentLengths := []float64{2, 1, 2, 1}
 	var graphResolution float64 = 0.001
 
 	rawArgs := os.Args[1:]

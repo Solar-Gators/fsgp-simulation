@@ -8,6 +8,7 @@ from mystic.constraints import *
 from mystic.symbolic import *
 
 NUM_ARGUMENTS = 8
+OVERWRITE_IMAGES = True
 
 try:
     subprocess.run(["go", "build", "."])
@@ -21,21 +22,25 @@ else:
 
 
 # Call CLI program and return output
-def call_cli_program(x):
+def call_cli_program(x, endArg):
     return subprocess.run(
-        [cli_program] + list(map(str, x)), capture_output=True, text=True
+        [cli_program] + list(map(str, x)) + [str(endArg)],
+        capture_output=True,
+        text=True,
     ).stdout
 
 
 # Cache to store the output for the current x to avoid redundant CLI calls
 output_cache = {}
 
+autoEndArg = "none"
+
 
 # Function to get the output from cache or CLI call
 def get_output(x):
     x_tuple = tuple(x)
     if x_tuple not in output_cache:
-        output_cache[x_tuple] = call_cli_program(x)
+        output_cache[x_tuple] = call_cli_program(x, autoEndArg)
     return output_cache[x_tuple]
 
 
@@ -88,8 +93,21 @@ def objective(x):
 
 mon = VerboseMonitor(10)
 
+i = 0
+
 
 def custom_callback(x):
+    global i
+    global autoEndArg
+    i += 1
+    if i % 10 == 0:
+        if OVERWRITE_IMAGES:
+            autoEndArg = ""
+        else:
+            autoEndArg = str(int(i / 10))
+    else:
+        autoEndArg = "none"
+
     y = objective(x)
     mon(x, y)
 
@@ -109,4 +127,4 @@ res = fmin(
 
 print(res)
 output_cache.clear()
-print(call_cli_program(res))
+print(call_cli_program(res, "final"))
