@@ -14,14 +14,27 @@ import (
 
 const ()
 
-// CalculateForce calculates the force based on the given velocity.
-func CalculateForce(velocity float64) float64 {
-	var dragCoefficient = 1.0
-	return dragCoefficient * math.Pow(velocity, 2)
+func CalculateForce(velocity float64, currentCurvature float64) float64 {
+	carMassKg := 298.0
+
+	var dragCoefficient = 0.1275
+	airResistance := dragCoefficient * math.Pow(velocity, 2)
+
+	// todo use slope of elevation
+
+	centripitalForce := (math.Pow(velocity, 2) / currentCurvature) * carMassKg
+
+	if currentCurvature >= 1000 {
+		centripitalForce = 0
+	}
+
+	return airResistance + centripitalForce
 }
 
-// CalculateWorkDone calculates the work done by a force over a segment.
 func CalculateWorkDone(force float64, distance float64) float64 {
+
+	// todo use motor efficciency
+
 	return force * distance
 }
 
@@ -66,8 +79,8 @@ func outputGraph(inputArr plotter.XYs, fileName string) {
 func main() {
 
 	// Define whether each segment is a straightaway (true) or a turn (false)
-	piecewiseFunctions := []bool{true, false, true, false}
-	segmentLengths := []float64{2, 1, 2, 1}
+	curvatureSampling := []float64{1000, 1000, 31.83, 1000, 1000, 31.83}
+	segmentLengths := []float64{200, 100, 200, 100}
 	var graphResolution float64 = 0.001
 
 	rawArgs := os.Args[1:]
@@ -88,24 +101,16 @@ func main() {
 		args[i] = val
 	}
 
-	turnCount := 0
-	straightCount := 0
-
 	var totalLength float64 = 0
 
-	for i, segmentType := range piecewiseFunctions {
-		if segmentType {
-			straightCount++
-		} else {
-			turnCount++
-		}
+	for i := range segmentLengths {
 		totalLength += segmentLengths[i]
 	}
 
 	graphResolution *= totalLength
 
 	// initial velocity, initial acceleration, then accel curve params
-	expectedArgCount := 2 + turnCount + straightCount*2
+	expectedArgCount := 2 + len(segmentLengths)*3
 
 	if hasEndArg {
 		expectedArgCount++
@@ -113,6 +118,7 @@ func main() {
 
 	if len(rawArgs) != expectedArgCount {
 		fmt.Println("Expected argument count: ", expectedArgCount)
+		fmt.Println("Recieved: ", len(rawArgs))
 		os.Exit(1)
 	}
 
@@ -128,62 +134,32 @@ func main() {
 	xOffset := 0.0
 	tiempo := 0.00
 	velo := currentTickVelo
-	a := 0.00
-	b := 0.00
-	c := 0.00
-	m := 0.00
 
 	var totalEnergyLost = 0.0
-	for i, segmentIsStraight := range piecewiseFunctions {
+	for i := range segmentLengths {
 		//checking different accel and velocity for different curves
-		if segmentIsStraight {
-			a := args[argIndex]
-			argIndex++
-			b := args[argIndex]
-			argIndex++
-			c := currentTickAccel - a*math.Pow(xOffset, 2) - b*xOffset
-			d := currentTickVelo - (a/3)*math.Pow(xOffset, 3) - (b/2)*math.Pow(xOffset, 2) - c*xOffset
+		a := args[argIndex]
+		argIndex++
+		b := args[argIndex]
+		argIndex++
+		c := currentTickAccel - a*math.Pow(xOffset, 2) - b*xOffset
+		d := currentTickVelo - (a/3)*math.Pow(xOffset, 3) - (b/2)*math.Pow(xOffset, 2) - c*xOffset
 
-			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
-				currentTickAccel = a*math.Pow(x, 2) + b*x + c
-				currentTickVelo = (a/3)*math.Pow(x, 3) + (b/2)*math.Pow(x, 2) + c*x + d
-				accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
-				veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
+		for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
+			currentTickAccel = a*math.Pow(x, 2) + b*x + c
+			currentTickVelo = (a/3)*math.Pow(x, 3) + (b/2)*math.Pow(x, 2) + c*x + d
+			accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
+			veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
 
-				var currentTickForce = CalculateForce(currentTickVelo)
-				var currentTickEnergy = CalculateWorkDone(currentTickForce, graphResolution)
-				totalEnergyLost += currentTickEnergy
-				forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
-				energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
-			}
-		} else {
-			m := args[argIndex]
-			argIndex++
-			b := currentTickAccel - m*xOffset
-			d := currentTickVelo - (m/2)*math.Pow(xOffset, 2) - b*xOffset
-
-			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
-				currentTickAccel = m*x + b
-				currentTickVelo = (m/2)*math.Pow(x, 2) + b*x + d
-				accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
-				veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
-
-				var currentTickForce = CalculateForce(currentTickVelo)
-				var currentTickEnergy = CalculateWorkDone(currentTickForce, graphResolution)
-				totalEnergyLost += currentTickEnergy
-				forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
-				energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
-			}
+			var currentTickForce = CalculateForce(currentTickVelo, curvatureSampling[int(float64(xOffset)/totalLength*float64(len(curvatureSampling)))])
+			var currentTickEnergy = CalculateWorkDone(currentTickForce, graphResolution)
+			totalEnergyLost += currentTickEnergy
+			forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
+			energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
 		}
 
-		if segmentIsStraight == true {
-			velo += (a/3)*(math.Pow(segmentLengths[i], 3)) + (b/2)*(math.Pow(segmentLengths[i], 2)) + c*(segmentLengths[i])
-			tiempo += simpson(0.00, float64(segmentLengths[i]), a, b, c, velo, 50)
-		}
-		if segmentIsStraight == false {
-			velo += (m/2)*(math.Pow(segmentLengths[i], 2)) + b*(segmentLengths[i])
-			tiempo += simpson(0.00, float64(segmentLengths[i]), 0.00, m, b, velo, 50)
-		}
+		velo += (a/3)*(math.Pow(segmentLengths[i], 3)) + (b/2)*(math.Pow(segmentLengths[i], 2)) + c*(segmentLengths[i])
+		tiempo += simpson(0.00, float64(segmentLengths[i]), a, b, c, velo, 50)
 
 		xOffset += segmentLengths[i]
 	}
