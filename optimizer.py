@@ -7,7 +7,6 @@ from mystic.monitors import *
 from mystic.constraints import *
 from mystic.symbolic import *
 
-NUM_ARGUMENTS = 8
 CALLS_BETWEEN_IMAGE = 20
 
 MAX_VELOCITY = 40.0
@@ -31,6 +30,17 @@ def call_cli_program(x, endArg):
         capture_output=True,
         text=True,
     ).stdout
+
+
+# Function to get the expected number of arguments from the CLI program
+def get_expected_argument_count():
+    output = subprocess.run([cli_program], capture_output=True, text=True).stdout
+    try:
+        # Parse the output to find the expected number of arguments
+        return int(output.split("Expected argument count:")[1].split("\n")[0])
+    except (IndexError, ValueError):
+        print("Could not determine the expected argument count from the CLI program.")
+        sys.exit(1)
 
 
 # Cache to store the output for the current x to avoid redundant CLI calls
@@ -72,18 +82,18 @@ def objective(x):
 
         # Check energy consumption constraint
         if energy_consumption > MAX_ENERGY_CONS or energy_consumption < 0:
-            time_elapsed += abs(energy_consumption - MAX_ENERGY_CONS) ** 2
+            time_elapsed += (abs(energy_consumption - MAX_ENERGY_CONS) + 1) ** 10
 
         # Check velocity constraints
         if initial_velocity > MAX_VELOCITY or initial_velocity < 0:
-            time_elapsed += abs(initial_velocity - MAX_VELOCITY) ** 2
+            time_elapsed += (abs(initial_velocity - MAX_VELOCITY) + 1) ** 10
 
         if final_velocity > MAX_VELOCITY or final_velocity < 0:
-            time_elapsed += abs(final_velocity - MAX_VELOCITY) ** 2
+            time_elapsed += (abs(final_velocity - MAX_VELOCITY) + 1) ** 10
 
         # Check the percentage difference constraint
         velocity_difference = abs(final_velocity - initial_velocity)
-        time_elapsed += abs(velocity_difference) ** 2
+        time_elapsed += (abs(velocity_difference) + 1) ** 10
 
         # If all constraints are satisfied, return the time elapsed
         return (
@@ -91,7 +101,7 @@ def objective(x):
             if time_elapsed != float("inf") and time_elapsed >= 0
             else sys.float_info.max
         )
-    except (ValueError, IndexError):
+    except (ValueError, IndexError, OverflowError):
         # If parsing fails, return max float value as penalty
         return sys.float_info.max
 
@@ -105,7 +115,7 @@ def custom_callback(x):
 
 
 # Initial guess
-x0 = [0] * NUM_ARGUMENTS
+x0 = [0] * get_expected_argument_count()
 x0[0] = 1
 
 # Solve the optimization problem using the constraints
