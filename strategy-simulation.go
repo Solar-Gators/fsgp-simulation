@@ -14,18 +14,20 @@ import (
 
 const ()
 
-func CalculateForce(velocity float64, currentCurvature float64) float64 {
+func CalculateForce(velocity float64, curvature float64) float64 {
 	carMassKg := 298.0
 
 	var dragCoefficient = 0.1275
 	airResistance := dragCoefficient * math.Pow(velocity, 2)
 
-	// todo use slope of elevation
+	// todo slope of elevation
 
-	centripitalForce := (math.Pow(velocity, 2) / currentCurvature) * carMassKg
+	var centripitalForce float64
 
-	if currentCurvature >= 1000 {
+	if curvature == 0 {
 		centripitalForce = 0
+	} else {
+		centripitalForce = (math.Pow(velocity, 2) / math.Abs(curvature)) * carMassKg
 	}
 
 	return airResistance + centripitalForce
@@ -129,6 +131,7 @@ func main() {
 	var veloPlot plotter.XYs
 	var forcePlot plotter.XYs
 	var energyPlot plotter.XYs
+	var curvaturePlot plotter.XYs
 
 	argIndex := 2
 	xOffset := 0.0
@@ -136,6 +139,7 @@ func main() {
 	velo := currentTickVelo
 
 	var totalEnergyLost = 0.0
+	var maxAccel, minAccel, maxVelo, minVelo float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1)
 	for i := range segmentLengths {
 		//checking different accel and velocity for different curves
 		a := args[argIndex]
@@ -148,14 +152,37 @@ func main() {
 		for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
 			currentTickAccel = a*math.Pow(x, 2) + b*x + c
 			currentTickVelo = (a/3)*math.Pow(x, 3) + (b/2)*math.Pow(x, 2) + c*x + d
+
+			if currentTickAccel > maxAccel {
+				maxAccel = currentTickAccel
+			}
+			if currentTickAccel < minAccel {
+				minAccel = currentTickAccel
+			}
+
+			// Update max and min velocity
+			if currentTickVelo > maxVelo {
+				maxVelo = currentTickVelo
+			}
+			if currentTickVelo < minVelo {
+				minVelo = currentTickVelo
+			}
+
 			accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
 			veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
 
-			var currentTickForce = CalculateForce(currentTickVelo, curvatureSampling[int(float64(xOffset)/totalLength*float64(len(curvatureSampling)))])
+			currentCurvature := curvatureSampling[int(float64(xOffset)/totalLength*float64(len(curvatureSampling)))]
+
+			if currentCurvature > 500 {
+				currentCurvature = 0
+			}
+
+			var currentTickForce = CalculateForce(currentTickVelo, currentCurvature)
 			var currentTickEnergy = CalculateWorkDone(currentTickForce, graphResolution)
 			totalEnergyLost += currentTickEnergy
 			forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
 			energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
+			curvaturePlot = append(curvaturePlot, plotter.XY{X: x, Y: currentCurvature})
 		}
 
 		velo += (a/3)*(math.Pow(segmentLengths[i], 3)) + (b/2)*(math.Pow(segmentLengths[i], 2)) + c*(segmentLengths[i])
@@ -171,9 +198,15 @@ func main() {
 		outputGraph(veloPlot, "./plots/velocity.png")
 		outputGraph(forcePlot, "./plots/force.png")
 		outputGraph(energyPlot, "./plots/energy.png")
+		outputGraph(curvaturePlot, "./plots/curvature.png")
 	}
 
 	fmt.Println("Initial Velocity (m/s):", veloPlot[0].Y)
+	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
+	fmt.Println("Max Velocity (m/s):", maxVelo)
+	fmt.Println("Min Velocity (m/s):", minVelo)
+	fmt.Println("Max Acceleration (m/s^2):", maxAccel)
+	fmt.Println("Min Acceleration (m/s^2):", minAccel)
 	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
 	fmt.Println("Time Elapsed (s): ", tiempo)
 	fmt.Println("Energy Consumed (J): ", energyPlot[len(energyPlot)-1].Y)

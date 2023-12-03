@@ -12,6 +12,9 @@ CALLS_BETWEEN_IMAGE = 20
 MAX_VELOCITY = 40.0
 MAX_ENERGY_CONS = 1300
 
+# m/s^2
+MAX_ACCELERATION = 3.0
+
 try:
     subprocess.run(["go", "build", "."])
 except:
@@ -79,17 +82,31 @@ def objective(x):
             output.split("Initial Velocity (m/s):")[1].split("\n")[0]
         )
         final_velocity = float(output.split("Final Velocity (m/s):")[1].split("\n")[0])
+        max_velocity = float(output.split("Max Velocity (m/s):")[1].split("\n")[0])
+        min_velocity = float(output.split("Min Velocity (m/s):")[1].split("\n")[0])
+        max_acceleration = float(
+            output.split("Max Acceleration (m/s^2):")[1].split("\n")[0]
+        )
+        min_acceleration = float(
+            output.split("Min Acceleration (m/s^2):")[1].split("\n")[0]
+        )
 
         # Check energy consumption constraint
         if energy_consumption > MAX_ENERGY_CONS or energy_consumption < 0:
             time_elapsed += (abs(energy_consumption - MAX_ENERGY_CONS) + 1) ** 10
 
         # Check velocity constraints
-        if initial_velocity > MAX_VELOCITY or initial_velocity < 0:
-            time_elapsed += (abs(initial_velocity - MAX_VELOCITY) + 1) ** 10
+        if max_velocity > MAX_VELOCITY:
+            time_elapsed += (max_velocity - MAX_VELOCITY + 1) ** 10
 
-        if final_velocity > MAX_VELOCITY or final_velocity < 0:
-            time_elapsed += (abs(final_velocity - MAX_VELOCITY) + 1) ** 10
+        if min_velocity < 0:
+            time_elapsed += (abs(min_velocity) + 1) ** 10
+
+        if max_acceleration > MAX_ACCELERATION:
+            time_elapsed += (max_acceleration - MAX_ACCELERATION + 1) ** 10
+
+        if abs(min_acceleration) > MAX_ACCELERATION:
+            time_elapsed += (abs(min_acceleration) - MAX_ACCELERATION + 1) ** 10
 
         # Check the percentage difference constraint
         velocity_difference = abs(final_velocity - initial_velocity)
