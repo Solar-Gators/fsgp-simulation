@@ -6,7 +6,7 @@ import (
 	"os"
 	"strconv"
 
-	// go run . 9 0 -1 2 -1 0.55 -3.5 -1.4
+	//go run . 9 0 -1 2 -1 0.55 -3.5 -1.4
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
@@ -71,7 +71,6 @@ func main() {
 	var graphResolution float64 = 0.001
 
 	rawArgs := os.Args[1:]
-
 	hasEndArg := false
 
 	args := make([]float64, len(rawArgs))
@@ -132,6 +131,7 @@ func main() {
 	b := 0.00
 	c := 0.00
 	m := 0.00
+	var trackDrawingVelocities = ""
 
 	var totalEnergyLost = 0.0
 	for i, segmentIsStraight := range piecewiseFunctions {
@@ -161,18 +161,32 @@ func main() {
 			argIndex++
 			b := currentTickAccel - m*xOffset
 			d := currentTickVelo - (m/2)*math.Pow(xOffset, 2) - b*xOffset
-
+			var colorOffsetVar = 0.0
+			var red = 255
+			var green = 0
+			var blue = 0
 			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
 				currentTickAccel = m*x + b
 				currentTickVelo = (m/2)*math.Pow(x, 2) + b*x + d
 				accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
 				veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
 
+				//converts and makes velocity string
+				colorOffsetStr := strconv.FormatFloat(colorOffsetVar, 'f', 2, 64)
+				trackDrawingVelocities += "<stop offset=\"" + colorOffsetStr + "\" style=\"stop-color:rgb(" + strconv.Itoa(red) + "," + strconv.Itoa(green) + "," + strconv.Itoa(blue) + ");stop-opacity:1\"/>"
 				var currentTickForce = CalculateForce(currentTickVelo)
 				var currentTickEnergy = CalculateWorkDone(currentTickForce, graphResolution)
 				totalEnergyLost += currentTickEnergy
 				forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
 				energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
+
+				//166 velo points rn? might scale
+				colorOffsetVar += segmentLengths[i] / 166
+
+				//max of 16 units of speed... can change scale later by putting in for denominator
+				red = int(math.Round(255 * currentTickVelo / 16))
+				blue = 0
+				green = 0
 			}
 		}
 
@@ -196,7 +210,6 @@ func main() {
 		outputGraph(forcePlot, "./plots/force.png")
 		outputGraph(energyPlot, "./plots/energy.png")
 	}
-
 	fmt.Println("Initial Velocity (m/s):", veloPlot[0].Y)
 	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
 	fmt.Println("Time Elapsed (s): ", tiempo)
