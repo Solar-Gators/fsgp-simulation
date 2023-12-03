@@ -137,9 +137,10 @@ func main() {
 	xOffset := 0.0
 	tiempo := 0.00
 	velo := currentTickVelo
-
+	var trackDrawingVelocities = ""
 	var totalEnergyLost = 0.0
 	var maxAccel, minAccel, maxVelo, minVelo float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1)
+	var colorOffsetVar = 0.0
 	for i := range segmentLengths {
 		//checking different accel and velocity for different curves
 		a := args[argIndex]
@@ -148,7 +149,9 @@ func main() {
 		argIndex++
 		c := currentTickAccel - a*math.Pow(xOffset, 2) - b*xOffset
 		d := currentTickVelo - (a/3)*math.Pow(xOffset, 3) - (b/2)*math.Pow(xOffset, 2) - c*xOffset
-
+		var red = 255
+		var green = 0
+		var blue = 0
 		for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
 			currentTickAccel = a*math.Pow(x, 2) + b*x + c
 			currentTickVelo = (a/3)*math.Pow(x, 3) + (b/2)*math.Pow(x, 2) + c*x + d
@@ -168,9 +171,6 @@ func main() {
 				minVelo = currentTickVelo
 			}
 
-			accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
-			veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
-
 			currentCurvature := curvatureSampling[int(float64(xOffset)/totalLength*float64(len(curvatureSampling)))]
 
 			if currentCurvature > 500 {
@@ -180,9 +180,26 @@ func main() {
 			var currentTickForce = CalculateForce(currentTickVelo, currentCurvature)
 			var currentTickEnergy = CalculateWorkDone(currentTickForce, graphResolution)
 			totalEnergyLost += currentTickEnergy
+			accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
+			veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
 			forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
 			energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
 			curvaturePlot = append(curvaturePlot, plotter.XY{X: x, Y: currentCurvature})
+
+			//converts and makes velocity string
+			colorOffsetStr := strconv.FormatFloat(colorOffsetVar/totalLength, 'f', 4, 64)
+
+			// if statment only needed to prevent printing final point
+			if colorOffsetVar/totalLength <= 1.0 {
+				trackDrawingVelocities += "<stop offset=\"" + colorOffsetStr + "\" style=\"stop-color:rgb(" + strconv.Itoa(red) + "," + strconv.Itoa(green) + "," + strconv.Itoa(blue) + ");stop-opacity:1\"/>\n"
+			}
+
+			colorOffsetVar += graphResolution
+
+			//max of 16 units of speed... can change scale later by putting in for denominator
+			red = int(math.Round(255 * currentTickVelo / 16))
+			blue = 0
+			green = 0
 		}
 
 		velo += (a/3)*(math.Pow(segmentLengths[i], 3)) + (b/2)*(math.Pow(segmentLengths[i], 2)) + c*(segmentLengths[i])
@@ -201,6 +218,8 @@ func main() {
 		outputGraph(curvaturePlot, "./plots/curvature.png")
 	}
 
+	// fmt.Println(trackDrawingVelocities)
+
 	fmt.Println("Initial Velocity (m/s):", veloPlot[0].Y)
 	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
 	fmt.Println("Max Velocity (m/s):", maxVelo)
@@ -211,4 +230,5 @@ func main() {
 	fmt.Println("Time Elapsed (s): ", tiempo)
 	fmt.Println("Energy Consumed (J): ", energyPlot[len(energyPlot)-1].Y)
 	fmt.Println("Energy Consumption (W): ", energyPlot[len(energyPlot)-1].Y/tiempo)
+
 }
