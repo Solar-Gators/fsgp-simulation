@@ -6,7 +6,11 @@ import (
 	"os"
 	"strconv"
 
+<<<<<<< Updated upstream
 	//go run . 9 0 -1 2 -1 0.55 -3.5 -1.4
+=======
+	// NEED A NEW TEST ARG FOR 14 ARGS
+>>>>>>> Stashed changes
 	"gonum.org/v1/plot"
 	"gonum.org/v1/plot/plotter"
 	"gonum.org/v1/plot/vg"
@@ -14,14 +18,40 @@ import (
 
 const ()
 
+<<<<<<< Updated upstream
 // CalculateForce calculates the force based on the given velocity.
 func CalculateForce(velocity float64) float64 {
 	var dragCoefficient = 1.0
 	return dragCoefficient * math.Pow(velocity, 2)
+=======
+func CalculateForce(velocity float64, curvature float64) float64 {
+	carMassKg := 298.0
+
+	var dragCoefficient = 0.1275
+	airResistance := dragCoefficient * math.Pow(velocity, 2)
+
+	// todo slope of elevation
+
+	var centripetalForce float64
+
+	if curvature == 0 {
+		centripetalForce = 0
+	} else {
+		centripetalForce = (math.Pow(velocity, 2) / math.Abs(curvature)) * carMassKg
+	}
+
+	return airResistance + centripetalForce
+>>>>>>> Stashed changes
 }
 
 // CalculateWorkDone calculates the work done by a force over a segment.
 func CalculateWorkDone(force float64, distance float64) float64 {
+<<<<<<< Updated upstream
+=======
+
+	// todo use motor efficiency
+
+>>>>>>> Stashed changes
 	return force * distance
 }
 
@@ -134,6 +164,7 @@ func main() {
 	var trackDrawingVelocities = ""
 
 	var totalEnergyLost = 0.0
+<<<<<<< Updated upstream
 	for i, segmentIsStraight := range piecewiseFunctions {
 		//checking different accel and velocity for different curves
 		if segmentIsStraight {
@@ -143,6 +174,20 @@ func main() {
 			argIndex++
 			c := currentTickAccel - a*math.Pow(xOffset, 2) - b*xOffset
 			d := currentTickVelo - (a/3)*math.Pow(xOffset, 3) - (b/2)*math.Pow(xOffset, 2) - c*xOffset
+=======
+	var maxAccel, minAccel, maxVelo, minVelo float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1)
+	for i := range segmentLengths {
+		//checking different accel and velocity for different curves
+		a := args[argIndex]
+		argIndex++
+		b := args[argIndex]
+		argIndex++
+		c := currentTickAccel - a*math.Pow(xOffset, 2) - b*xOffset
+		d := currentTickVelo - (a/3)*math.Pow(xOffset, 3) - (b/2)*math.Pow(xOffset, 2) - c*xOffset
+		for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
+			currentTickAccel = a*math.Pow(x, 2) + b*x + c
+			currentTickVelo = (a/3)*math.Pow(x, 3) + (b/2)*math.Pow(x, 2) + c*x + d
+>>>>>>> Stashed changes
 
 			for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
 				currentTickAccel = a*math.Pow(x, 2) + b*x + c
@@ -188,6 +233,32 @@ func main() {
 				blue = 0
 				green = 0
 			}
+<<<<<<< Updated upstream
+=======
+
+			// Update max and min velocity
+			if currentTickVelo > maxVelo {
+				maxVelo = currentTickVelo
+			}
+			if currentTickVelo < minVelo {
+				minVelo = currentTickVelo
+			}
+
+			currentCurvature := curvatureSampling[int(float64(xOffset)/totalLength*float64(len(curvatureSampling)))]
+
+			if currentCurvature > 500 {
+				currentCurvature = 0
+			}
+
+			var currentTickForce = CalculateForce(currentTickVelo, currentCurvature)
+			var currentTickEnergy = CalculateWorkDone(currentTickForce, graphResolution)
+			totalEnergyLost += currentTickEnergy
+			accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
+			veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
+			forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
+			energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
+			curvaturePlot = append(curvaturePlot, plotter.XY{X: x, Y: currentCurvature})
+>>>>>>> Stashed changes
 		}
 
 		if segmentIsStraight == true {
@@ -210,6 +281,28 @@ func main() {
 		outputGraph(forcePlot, "./plots/force.png")
 		outputGraph(energyPlot, "./plots/energy.png")
 	}
+<<<<<<< Updated upstream
+=======
+	var colorOffsetVar = 0.0
+	var red = 255
+	var green = 0
+	var blue = 0
+
+	//Chromatic Plot
+	for i, currentVelocity := range veloPlot {
+		colorOffsetStr := strconv.FormatInt(int64(i)/int64(len(veloPlot)), 10)
+		red = 255 - int(math.Round(125*((currentVelocity.Y-minVelo)/(maxVelo-minVelo))))
+		green = int(math.Round(255 * ((currentVelocity.Y - minVelo) / (maxVelo - minVelo))))
+		blue = 0
+		//for not printing last point
+		if colorOffsetVar/totalLength <= 1.0 {
+			trackDrawingVelocities += "<stop offset=\"" + colorOffsetStr + "\" style=\"stop-color:rgb(" + strconv.Itoa(red) + "," + strconv.Itoa(green) + "," + strconv.Itoa(blue) + ");stop-opacity:1\"/>\n"
+		}
+		colorOffsetVar += graphResolution
+	}
+	fmt.Println(trackDrawingVelocities)
+
+>>>>>>> Stashed changes
 	fmt.Println("Initial Velocity (m/s):", veloPlot[0].Y)
 	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
 	fmt.Println("Time Elapsed (s): ", tiempo)
