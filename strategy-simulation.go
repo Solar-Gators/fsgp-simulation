@@ -140,7 +140,6 @@ func main() {
 	var trackDrawingVelocities = ""
 	var totalEnergyLost = 0.0
 	var maxAccel, minAccel, maxVelo, minVelo float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1)
-	var colorOffsetVar = 0.0
 	for i := range segmentLengths {
 		//checking different accel and velocity for different curves
 		a := args[argIndex]
@@ -149,9 +148,6 @@ func main() {
 		argIndex++
 		c := currentTickAccel - a*math.Pow(xOffset, 2) - b*xOffset
 		d := currentTickVelo - (a/3)*math.Pow(xOffset, 3) - (b/2)*math.Pow(xOffset, 2) - c*xOffset
-		var red = 255
-		var green = 0
-		var blue = 0
 		for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
 			currentTickAccel = a*math.Pow(x, 2) + b*x + c
 			currentTickVelo = (a/3)*math.Pow(x, 3) + (b/2)*math.Pow(x, 2) + c*x + d
@@ -185,21 +181,6 @@ func main() {
 			forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
 			energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
 			curvaturePlot = append(curvaturePlot, plotter.XY{X: x, Y: currentCurvature})
-
-			//converts and makes velocity string
-			colorOffsetStr := strconv.FormatFloat(colorOffsetVar/totalLength, 'f', 4, 64)
-
-			// if statment only needed to prevent printing final point
-			if colorOffsetVar/totalLength <= 1.0 {
-				trackDrawingVelocities += "<stop offset=\"" + colorOffsetStr + "\" style=\"stop-color:rgb(" + strconv.Itoa(red) + "," + strconv.Itoa(green) + "," + strconv.Itoa(blue) + ");stop-opacity:1\"/>\n"
-			}
-
-			colorOffsetVar += graphResolution
-
-			//max of 16 units of speed... can change scale later by putting in for denominator
-			red = int(math.Round(255 * currentTickVelo / 16))
-			blue = 0
-			green = 0
 		}
 
 		velo += (a/3)*(math.Pow(segmentLengths[i], 3)) + (b/2)*(math.Pow(segmentLengths[i], 2)) + c*(segmentLengths[i])
@@ -209,6 +190,24 @@ func main() {
 	}
 
 	if !hasEndArg || rawArgs[len(rawArgs)-1] != "none" {
+		var colorOffsetVar = 0.0
+		var red = 255
+		var green = 0
+		var blue = 0
+		//Chromatic Plot
+		for i, currentVelocity := range veloPlot {
+			var colorOffsetStr float64 = float64(i) / float64(len(veloPlot))
+			red = 130 + int(math.Round(125*((currentVelocity.Y-minVelo)/(maxVelo-minVelo))))
+			green = 0
+			blue = 255 - int(math.Round(255*((currentVelocity.Y-minVelo)/(maxVelo-minVelo))))
+			if colorOffsetVar/totalLength <= 1.0 {
+				trackDrawingVelocities += "<stop offset=\"" + strconv.FormatFloat(colorOffsetStr, 'f', 4, 64) + "\" style=\"stop-color:rgb(" + strconv.Itoa(red) + "," + strconv.Itoa(green) + "," + strconv.Itoa(blue) + ");stop-opacity:1\"/>\n"
+			}
+
+			colorOffsetVar += graphResolution
+		}
+		fmt.Println(trackDrawingVelocities)
+
 		os.MkdirAll("./plots", 0755)
 
 		outputGraph(accelPlot, "./plots/acceleration.png")
@@ -226,7 +225,6 @@ func main() {
 	fmt.Println("Min Velocity (m/s):", minVelo)
 	fmt.Println("Max Acceleration (m/s^2):", maxAccel)
 	fmt.Println("Min Acceleration (m/s^2):", minAccel)
-	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
 	fmt.Println("Time Elapsed (s): ", tiempo)
 	fmt.Println("Energy Consumed (J): ", energyPlot[len(energyPlot)-1].Y)
 	fmt.Println("Energy Consumption (W): ", energyPlot[len(energyPlot)-1].Y/tiempo)
