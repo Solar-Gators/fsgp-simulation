@@ -44,19 +44,24 @@ func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
 	return 1.0 / (q*math.Pow(x, 3) + w*math.Pow(x, 2) + e*x + r)
 }
 
-func simpson(a float64, b float64, q float64, w float64, e float64, r float64, n float64) float64 {
-	h := (b - a) / n
-	secondpart := 0.00
-	for zz := 1.00; zz <= n/2; zz += 1.00 {
-		secondpart += integrand((a + (2*zz-1)*h), q, w, e, r)
+// simpson calculates the definite integral of a function using Simpson's rule.
+// a: the lower limit of integration.
+// b: the upper limit of integration.
+// q, w, e, r: parameters of the function to be integrated.
+// n: the number of subintervals to use in the approximation; should be even.
+func simpson(a float64, b float64, q float64, w float64, e float64, r float64, n int) float64 {
+	h := (b - a) / float64(n)
+	sum := integrand(a, q, w, e, r) + integrand(b, q, w, e, r)
+
+	for i := 1; i < n; i += 2 {
+		sum += 4 * integrand(a+float64(i)*h, q, w, e, r)
 	}
-	secondpart *= 2.00
-	thirdpart := 0.00
-	for zz := 1.00; zz <= (n/2)-1; zz += 1.00 {
-		thirdpart += integrand((a + (2*zz)*h), q, w, e, r)
+
+	for i := 2; i < n-1; i += 2 {
+		sum += 2 * integrand(a+float64(i)*h, q, w, e, r)
 	}
-	thirdpart *= 2.00
-	return ((h / 3.00) * (integrand(a, q, w, e, r) + secondpart + thirdpart + integrand(b, q, w, e, r)))
+
+	return (h / 3) * sum
 }
 
 func outputGraph(inputArr plotter.XYs, fileName string) {
@@ -80,7 +85,6 @@ func outputGraph(inputArr plotter.XYs, fileName string) {
 
 func main() {
 
-	// Define whether each segment is a straightaway (true) or a turn (false)
 	curvatureSampling := []float64{1000, 1000, 31.83, 1000, 1000, 31.83}
 	segmentLengths := []float64{200, 100, 200, 100}
 	var graphResolution float64 = 0.001
@@ -112,6 +116,10 @@ func main() {
 	graphResolution *= totalLength
 
 	// initial velocity, initial acceleration, then accel curve params
+	// 0: initial velocity
+	// 1: initial acceleration
+	// 2-4: parabola params
+	// next 3: parabola params
 	expectedArgCount := 2 + len(segmentLengths)*3
 
 	if hasEndArg {
