@@ -12,6 +12,14 @@ import (
 	"gonum.org/v1/plot/vg"
 )
 
+// input arguments:
+
+// initial velocity, initial acceleration, then accel curve params
+// 0: initial velocity
+// 1: initial acceleration
+// 2-4: parabola params
+// next 3: parabola params
+
 const ()
 
 func CalculateForce(velocity float64, curvature float64) float64 {
@@ -85,9 +93,16 @@ func outputGraph(inputArr plotter.XYs, fileName string) {
 
 func main() {
 
-	curvatureSampling := []float64{1000, 1000, 31.83, 1000, 1000, 31.83}
+	// CONSTANT DEFINITIONS:
+
+	// track shape:
+	curvatureSampling := []float64{1000, 31.83, 1000, 31.83}
 	segmentLengths := []float64{200, 100, 200, 100}
-	var graphResolution float64 = 0.001
+
+	// number of points in the graph to compute:
+	numTicks := 1000
+
+	// END CONSTANT DEFINIONS
 
 	rawArgs := os.Args[1:]
 
@@ -113,6 +128,7 @@ func main() {
 		totalLength += segmentLengths[i]
 	}
 
+	var graphResolution float64 = 1 / float64(numTicks)
 	graphResolution *= totalLength
 
 	// initial velocity, initial acceleration, then accel curve params
@@ -120,7 +136,12 @@ func main() {
 	// 1: initial acceleration
 	// 2-4: parabola params
 	// next 3: parabola params
-	expectedArgCount := 2 + len(segmentLengths)*3
+
+	// parabola params (a*x^2 + b*x + c) - where c is inferred.
+	// x starts at time=0 (for all parabolas), it is NOT RELATIVE
+	// for example, inputting the same params for 2 parabolas in a row will give a single continuous parabola, rather than two fully seperate ones.
+
+	expectedArgCount := 2 + len(segmentLengths)*2
 
 	if hasEndArg {
 		expectedArgCount++
