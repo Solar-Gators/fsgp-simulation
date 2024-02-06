@@ -137,7 +137,11 @@ func main() {
 	// 2-4: parabola params
 	// next 3: parabola params
 
-	// parabola params (a*x^2 + b*x + c) - where c is inferred.
+	// parabola params (a*x^2 + b*x + c) where:
+	// a is first arg
+	// b is second arg
+	// c is inferred
+
 	// x starts at time=0 (for all parabolas), it is NOT RELATIVE
 	// for example, inputting the same params for 2 parabolas in a row will give a single continuous parabola, rather than two fully seperate ones.
 
