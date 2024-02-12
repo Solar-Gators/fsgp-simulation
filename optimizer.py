@@ -1,19 +1,17 @@
-import subprocess
-import platform
-import sys
 import os
-from mystic.solvers import *
-from mystic.monitors import *
-from mystic.constraints import *
-from mystic.symbolic import *
+import platform
+import subprocess
+import sys
+
+from mystic.monitors import VerboseMonitor
+from mystic.solvers import LatticeSolver
+from mystic.strategy import Best1Bin
+from mystic.termination import VTR
 
 CALLS_BETWEEN_IMAGE = 20
-
 MAX_VELOCITY = 40.0
 MAX_ENERGY_CONS = 1300
-
-# m/s^2
-MAX_ACCELERATION = 3.0
+MAX_ACCELERATION = 3.0  # m/s^2
 
 try:
     subprocess.run(["go", "build", "."])
@@ -26,7 +24,6 @@ else:
     cli_program = "./strategy-simulation"
 
 
-# Call CLI program and return output
 def call_cli_program(x, endArg):
     return subprocess.run(
         [cli_program] + list(map(str, x)) + [str(endArg)],
@@ -35,31 +32,22 @@ def call_cli_program(x, endArg):
     ).stdout
 
 
-# Function to get the expected number of arguments from the CLI program
 def get_expected_argument_count():
     output = subprocess.run([cli_program], capture_output=True, text=True).stdout
     try:
-        # Parse the output to find the expected number of arguments
         return int(output.split("Expected argument count:")[1].split("\n")[0])
     except (IndexError, ValueError):
         print("Could not determine the expected argument count from the CLI program.")
         sys.exit(1)
 
 
-# Cache to store the output for the current x to avoid redundant CLI calls
 output_cache = {}
-
-
 i = 0
 
 
-# Function to get the output from cache or CLI call
 def get_output(x):
     global i
-    if i % CALLS_BETWEEN_IMAGE == 0:
-        autoEndArg = ""
-    else:
-        autoEndArg = "none"
+    autoEndArg = "" if i % CALLS_BETWEEN_IMAGE == 0 else "none"
     i += 1
     x_tuple = tuple(x)
     if x_tuple not in output_cache:
@@ -67,10 +55,7 @@ def get_output(x):
     return output_cache[x_tuple]
 
 
-# Objective function with constraints
 def objective(x):
-    # in %
-
     output = get_output(x)
     try:
         # Parse the output for the required values
@@ -123,27 +108,27 @@ def objective(x):
         return sys.float_info.max
 
 
+# Initialization
+expected_args = get_expected_argument_count()
+npts = 80  # Number of points in the lattice (adjust based on problem size)
+bounds = [(0, MAX_VELOCITY)] * expected_args  # Assuming bounds are known
 mon = VerboseMonitor(10)
 
+# Configure and solve using LatticeSolver
+cube_root_npts = int(round(npts ** (1 / expected_args)))  # For 3D: npts ** (1/3)
+nbins = (cube_root_npts,) * expected_args  # Adjust this based on your problem
 
-def custom_callback(x):
-    y = objective(x)
-    mon(x, y)
+# Initialization for target value
+target_value = 0.01  # Set this to your desired target for the objective function
 
+# Configure and solve using LatticeSolver
+solver = LatticeSolver(expected_args, nbins=nbins)
+solver.SetEvaluationMonitor(mon)
+# Use VTR with the target value directly
+solver.Solve(objective, termination=VTR(target_value), strategy=Best1Bin, disp=True)
 
-# Initial guess
-x0 = [0] * get_expected_argument_count()
-x0[0] = 1
-
-# Solve the optimization problem using the constraints
-res = fmin_powell(
-    objective,
-    x0,
-    disp=True,
-    maxiter=2000,
-    callback=custom_callback,
-)
-
-print(res)
+res = solver.Solution()
+print("Optimized Result:", res)
+print("Objective Value:", objective(res))
 output_cache.clear()
 print(call_cli_program(res, ""))
