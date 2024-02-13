@@ -22,10 +22,11 @@ import (
 
 const ()
 
-func CalculateForce(velocity float64, curvature float64) float64 {
+func CalculateWorkDone(velocity float64, curvature float64, step_distance float64) float64 {
 	carMassKg := 298.0
 
-	var dragCoefficient = 0.1275
+	dragCoefficient := 0.1275
+	wheelCircumference := 1.875216
 	airResistance := dragCoefficient * math.Pow(velocity, 2)
 
 	// todo slope of elevation
@@ -38,14 +39,19 @@ func CalculateForce(velocity float64, curvature float64) float64 {
 		centripitalForce = (math.Pow(velocity, 2) / math.Abs(curvature)) * carMassKg
 	}
 
-	return airResistance + centripitalForce
-}
+	force := airResistance + centripitalForce
+	work := force * step_distance
 
-func CalculateWorkDone(force float64, distance float64) float64 {
+	motorRpm := 60 * (velocity / wheelCircumference)
+	motorCurrent := (-3*motorRpm - 2700) / 13
+	var motorEfficiency float64
+	if motorCurrent >= 14 {
+		motorEfficiency = 0.9264 + 0.0015*(motorCurrent-14)
+	} else {
+		motorEfficiency = ((motorCurrent - 1.1) / (motorCurrent - .37)) - .02
+	}
 
-	// todo use motor efficciency
-
-	return force * distance
+	return motorEfficiency * work
 }
 
 func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
@@ -210,12 +216,10 @@ func main() {
 				currentCurvature = 0
 			}
 
-			var currentTickForce = CalculateForce(currentTickVelo, currentCurvature)
-			var currentTickEnergy = CalculateWorkDone(currentTickForce, graphResolution)
+			var currentTickEnergy = CalculateWorkDone(currentTickVelo, currentCurvature, graphResolution)
 			totalEnergyLost += currentTickEnergy
 			accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
 			veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
-			forcePlot = append(forcePlot, plotter.XY{X: x, Y: currentTickForce})
 			energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
 			curvaturePlot = append(curvaturePlot, plotter.XY{X: x, Y: currentCurvature})
 
