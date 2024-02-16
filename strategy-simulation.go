@@ -21,16 +21,15 @@ import (
 // next 3: parabola params
 
 func CalculateWorkDone(velocity float64, curvature float64, step_distance float64) float64 {
-	carMassKg := 298.0
+	const carMassKg = 298.0
+	const dragCoefficient = 0.1275
+	const wheelCircumference = 1.875216
 
-	dragCoefficient := 0.1275
-	wheelCircumference := 1.875216
 	airResistance := dragCoefficient * math.Pow(velocity, 2)
 
 	// todo slope of elevation
 
 	var centripitalForce float64
-
 	if curvature == 0 {
 		centripitalForce = 0
 	} else {
@@ -77,7 +76,6 @@ func simpson(a float64, b float64, q float64, w float64, e float64, r float64, n
 }
 
 func outputGraph(inputArr plotter.XYs, fileName string) {
-
 	toPlot := plot.New()
 
 	lines, err := plotter.NewLine(inputArr)
@@ -96,7 +94,6 @@ func outputGraph(inputArr plotter.XYs, fileName string) {
 }
 
 func main() {
-
 	// CONSTANT DEFINITIONS:
 
 	// track shape:
@@ -104,7 +101,7 @@ func main() {
 	segmentLengths := []float64{200, 100, 200, 100}
 
 	// number of points in the graph to compute:
-	numTicks := 1000
+	const numTicks = 1000
 
 	// END CONSTANT DEFINIONS
 
@@ -165,20 +162,20 @@ func main() {
 	var totalEnergyLost = 0.0
 	var maxAccel, minAccel, maxVelo, minVelo float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1)
 	var colorOffsetVar = 0.0
-	for i, segmentLength := range segmentLengths {
+	for _, segmentLength := range segmentLengths {
 		//checking different accel and velocity for different curves
-		a := (args[argIndex] / segmentLength)
+		a := args[argIndex] / segmentLength
 		argIndex++
-		b := (args[argIndex] / segmentLength)
+		b := args[argIndex] / segmentLength
 		argIndex++
 		c := currentTickAccel - a*math.Pow(xOffset, 2) - b*xOffset
-		d := currentTickVelo - (a/3)*math.Pow(xOffset, 3) - (b/2)*math.Pow(xOffset, 2) - c*xOffset
 		var red = 255
 		var green = 0
 		var blue = 0
-		for x := xOffset; x <= xOffset+segmentLengths[i]; x += graphResolution {
+		for x := xOffset; x <= xOffset+segmentLength; x += graphResolution {
+			timeToTravel := graphResolution / currentTickVelo
 			currentTickAccel = a*math.Pow(x, 2) + b*x + c
-			currentTickVelo = (a/3)*math.Pow(x, 3) + (b/2)*math.Pow(x, 2) + c*x + d
+			currentTickVelo += currentTickAccel * timeToTravel
 
 			if currentTickAccel > maxAccel {
 				maxAccel = currentTickAccel
@@ -224,10 +221,10 @@ func main() {
 			green = 0
 		}
 
-		velo += (a/3)*(math.Pow(segmentLengths[i], 3)) + (b/2)*(math.Pow(segmentLengths[i], 2)) + c*(segmentLengths[i])
-		tiempo += simpson(0.00, float64(segmentLengths[i]), a, b, c, velo, 50)
+		velo += (a/3)*(math.Pow(segmentLength, 3)) + (b/2)*(math.Pow(segmentLength, 2)) + c*(segmentLength)
+		tiempo += simpson(0.00, float64(segmentLength), a, b, c, velo, 50)
 
-		xOffset += segmentLengths[i]
+		xOffset += segmentLength
 	}
 
 	if graphOutput {
