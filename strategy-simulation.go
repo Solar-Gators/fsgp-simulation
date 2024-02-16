@@ -20,8 +20,6 @@ import (
 // 2-4: parabola params
 // next 3: parabola params
 
-const ()
-
 func CalculateWorkDone(velocity float64, curvature float64, step_distance float64) float64 {
 	carMassKg := 298.0
 
@@ -111,7 +109,6 @@ func main() {
 	// END CONSTANT DEFINIONS
 
 	rawArgs := os.Args[1:]
-
 	hasEndArg := false
 
 	args := make([]float64, len(rawArgs))
@@ -128,40 +125,28 @@ func main() {
 		args[i] = val
 	}
 
-	var totalLength float64 = 0
+	graphOutput := false
+	if !hasEndArg || rawArgs[len(rawArgs)-1] != "none" {
+		graphOutput = true
+	}
 
+	expectedArgCount := 2 + len(segmentLengths)*2
+	if hasEndArg {
+		expectedArgCount++
+	}
+	if len(rawArgs) != expectedArgCount {
+		fmt.Println("Expected argument count: ", expectedArgCount)
+		fmt.Println("Recieved: ", len(rawArgs))
+		os.Exit(1)
+	}
+
+	var totalLength float64 = 0
 	for i := range segmentLengths {
 		totalLength += segmentLengths[i]
 	}
 
 	var graphResolution float64 = 1 / float64(numTicks)
 	graphResolution *= totalLength
-
-	// initial velocity, initial acceleration, then accel curve params
-	// 0: initial velocity
-	// 1: initial acceleration
-	// 2-4: parabola params
-	// next 3: parabola params
-
-	// parabola params (a*x^2 + b*x + c) where:
-	// a is first arg
-	// b is second arg
-	// c is inferred
-
-	// x starts at time=0 (for all parabolas), it is NOT RELATIVE
-	// for example, inputting the same params for 2 parabolas in a row will give a single continuous parabola, rather than two fully seperate ones.
-
-	expectedArgCount := 2 + len(segmentLengths)*2
-
-	if hasEndArg {
-		expectedArgCount++
-	}
-
-	if len(rawArgs) != expectedArgCount {
-		fmt.Println("Expected argument count: ", expectedArgCount)
-		fmt.Println("Recieved: ", len(rawArgs))
-		os.Exit(1)
-	}
 
 	currentTickVelo := args[0]
 	currentTickAccel := args[1]
@@ -180,11 +165,11 @@ func main() {
 	var totalEnergyLost = 0.0
 	var maxAccel, minAccel, maxVelo, minVelo float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1)
 	var colorOffsetVar = 0.0
-	for i := range segmentLengths {
+	for i, segmentLength := range segmentLengths {
 		//checking different accel and velocity for different curves
-		a := args[argIndex]
+		a := (args[argIndex] / segmentLength)
 		argIndex++
-		b := args[argIndex]
+		b := (args[argIndex] / segmentLength)
 		argIndex++
 		c := currentTickAccel - a*math.Pow(xOffset, 2) - b*xOffset
 		d := currentTickVelo - (a/3)*math.Pow(xOffset, 3) - (b/2)*math.Pow(xOffset, 2) - c*xOffset
@@ -227,7 +212,7 @@ func main() {
 			colorOffsetStr := strconv.FormatFloat(colorOffsetVar/totalLength, 'f', 4, 64)
 
 			// if statment only needed to prevent printing final point
-			if colorOffsetVar/totalLength <= 1.0 {
+			if graphOutput && colorOffsetVar/totalLength <= 1.0 {
 				trackDrawingVelocities += "<stop offset=\"" + colorOffsetStr + "\" style=\"stop-color:rgb(" + strconv.Itoa(red) + "," + strconv.Itoa(green) + "," + strconv.Itoa(blue) + ");stop-opacity:1\"/>\n"
 			}
 
@@ -245,7 +230,7 @@ func main() {
 		xOffset += segmentLengths[i]
 	}
 
-	if !hasEndArg || rawArgs[len(rawArgs)-1] != "none" {
+	if graphOutput {
 		os.MkdirAll("./plots", 0755)
 
 		outputGraph(accelPlot, "./plots/acceleration.png")
@@ -253,9 +238,9 @@ func main() {
 		outputGraph(forcePlot, "./plots/force.png")
 		outputGraph(energyPlot, "./plots/energy.png")
 		outputGraph(curvaturePlot, "./plots/curvature.png")
-	}
 
-	// fmt.Println(trackDrawingVelocities)
+		// fmt.Println(trackDrawingVelocities)
+	}
 
 	fmt.Println("Initial Velocity (m/s):", veloPlot[0].Y)
 	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
