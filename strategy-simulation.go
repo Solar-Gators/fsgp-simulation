@@ -145,7 +145,7 @@ func main() {
 	var graphResolution float64 = 1 / float64(numTicks)
 	graphResolution *= totalLength
 
-	currentTickVelo := args[0]
+	currentTickVelo := math.Abs(args[0]) + 1
 	currentTickAccel := args[1]
 
 	var accelPlot plotter.XYs
@@ -211,14 +211,14 @@ func main() {
 			// if statment only needed to prevent printing final point
 			if graphOutput && colorOffsetVar/totalLength <= 1.0 {
 				trackDrawingVelocities += "<stop offset=\"" + colorOffsetStr + "\" style=\"stop-color:rgb(" + strconv.Itoa(red) + "," + strconv.Itoa(green) + "," + strconv.Itoa(blue) + ");stop-opacity:1\"/>\n"
+
+				colorOffsetVar += graphResolution
+
+				//max of 16 units of speed... can change scale later by putting in for denominator
+				red = int(math.Round(255 * currentTickVelo / 16))
+				blue = 0
+				green = 0
 			}
-
-			colorOffsetVar += graphResolution
-
-			//max of 16 units of speed... can change scale later by putting in for denominator
-			red = int(math.Round(255 * currentTickVelo / 16))
-			blue = 0
-			green = 0
 		}
 
 		velo += (a/3)*(math.Pow(segmentLength, 3)) + (b/2)*(math.Pow(segmentLength, 2)) + c*(segmentLength)
