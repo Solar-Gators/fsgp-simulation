@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 from mystic.monitors import VerboseMonitor
-from mystic.solvers import LatticeSolver
+from mystic.solvers import *
 from mystic.strategy import Best1Bin
 from mystic.termination import VTR
 
@@ -63,8 +63,8 @@ def objective(x):
         energy_consumption = float(
             output.split("Energy Consumption (W):")[1].split("\n")[0]
         )
-        initial_velocity = float(
-            output.split("Initial Velocity (m/s):")[1].split("\n")[0]
+        initial_velocity = abs(
+            float(output.split("Initial Velocity (m/s):")[1].split("\n")[0])
         )
         final_velocity = float(output.split("Final Velocity (m/s):")[1].split("\n")[0])
         max_velocity = float(output.split("Max Velocity (m/s):")[1].split("\n")[0])
@@ -78,24 +78,24 @@ def objective(x):
 
         # Check energy consumption constraint
         if energy_consumption > MAX_ENERGY_CONS or energy_consumption < 0:
-            time_elapsed += (abs(energy_consumption - MAX_ENERGY_CONS) + 1) ** 10
+            time_elapsed += (abs(energy_consumption - MAX_ENERGY_CONS) + 1) * 100
 
         # Check velocity constraints
         if max_velocity > MAX_VELOCITY:
-            time_elapsed += (max_velocity - MAX_VELOCITY + 1) ** 10
+            time_elapsed += (max_velocity - MAX_VELOCITY + 1) * 100
 
         if min_velocity < 0:
-            time_elapsed += (abs(min_velocity) + 1) ** 10
+            time_elapsed += (abs(min_velocity) + 1) * 100
 
         if max_acceleration > MAX_ACCELERATION:
-            time_elapsed += (max_acceleration - MAX_ACCELERATION + 1) ** 10
+            time_elapsed += (max_acceleration - MAX_ACCELERATION + 1) * 100
 
         if abs(min_acceleration) > MAX_ACCELERATION:
-            time_elapsed += (abs(min_acceleration) - MAX_ACCELERATION + 1) ** 10
+            time_elapsed += (abs(min_acceleration) - MAX_ACCELERATION + 1) * 100
 
         # Check the percentage difference constraint
         velocity_difference = abs(final_velocity - initial_velocity)
-        time_elapsed += (abs(velocity_difference) + 1) ** 10
+        time_elapsed += (abs(velocity_difference) + 1) * 100
 
         # If all constraints are satisfied, return the time elapsed
         return (
@@ -110,7 +110,7 @@ def objective(x):
 
 # Initialization
 expected_args = get_expected_argument_count()
-npts = 80  # Number of points in the lattice (adjust based on problem size)
+npts = 20  # Number of points in the lattice (adjust based on problem size)
 bounds = [(0, MAX_VELOCITY)] * expected_args  # Assuming bounds are known
 mon = VerboseMonitor(10)
 
@@ -122,7 +122,7 @@ nbins = (cube_root_npts,) * expected_args  # Adjust this based on your problem
 target_value = 0.01  # Set this to your desired target for the objective function
 
 # Configure and solve using LatticeSolver
-solver = LatticeSolver(expected_args, nbins=nbins)
+solver = SparsitySolver(expected_args, npts=npts)
 solver.SetEvaluationMonitor(mon)
 # Use VTR with the target value directly
 solver.Solve(objective, termination=VTR(target_value), strategy=Best1Bin, disp=True)
