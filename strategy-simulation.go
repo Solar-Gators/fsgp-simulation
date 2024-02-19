@@ -12,6 +12,17 @@ import (
 	"gonum.org/v1/plot/vg"
 )
 
+// CONSTANT DEFINITIONS:
+// track shape:
+var curvatureSampling = []float64{1000, 31.83, 1000, 31.83}
+var segmentLengths = []float64{200, 100, 200, 100}
+
+// elevation data, evenly sampled over entire track
+var elevations = []float64{10, 0, 10}
+
+// number of points in the graph to compute:
+const numTicks = 1000
+
 // input arguments:
 
 // initial velocity, initial acceleration, then accel curve params
@@ -94,17 +105,6 @@ func outputGraph(inputArr plotter.XYs, fileName string) {
 }
 
 func main() {
-	// CONSTANT DEFINITIONS:
-
-	// track shape:
-	curvatureSampling := []float64{1000, 31.83, 1000, 31.83}
-	segmentLengths := []float64{200, 100, 200, 100}
-
-	// number of points in the graph to compute:
-	const numTicks = 1000
-
-	// END CONSTANT DEFINIONS
-
 	rawArgs := os.Args[1:]
 	hasEndArg := false
 
