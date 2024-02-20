@@ -16,7 +16,7 @@ import (
 var segmentLengths = []float64{200, 100, 200, 100}
 
 // elevation/curvature data, evenly sampled over entire track
-var elevationSampling = []float64{10, 0, 10}
+var inclineSlopeSampling = []float64{0.05, -0.05, 0.05, -0.05}
 var curvatureSampling = []float64{1000, 31.83, 1000, 31.83}
 
 // number of points in the graph to compute:
@@ -30,25 +30,31 @@ const numTicks = 1000
 // 2-4: parabola params
 // next 3: parabola params
 
-func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, elevation float64) float64 {
+// this should sum to 0 at the end
+var sum_mgh = 0.0
+
+// this is to test if elevation even matters
+var net_mgh_energy = 0.0
+
+// returns (work done, centripetal force)
+func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, incline_slope float64) (float64, float64) {
 	const carMassKg = 298.0
 	const dragCoefficient = 0.1275
 	const wheelCircumference = 1.875216
 
 	airResistance := dragCoefficient * math.Pow(velocity, 2)
 
-	var centripitalForce float64
+	var centripetalForce float64
 	if curvature == 0 {
-		centripitalForce = 0
+		centripetalForce = 0
 	} else {
-		centripitalForce = (math.Pow(velocity, 2) / math.Abs(curvature)) * carMassKg
+		centripetalForce = (math.Pow(velocity, 2) / math.Abs(curvature)) * carMassKg
 	}
 
-	if centripitalForce > 19.6 {
-		println("Car flipped!")
-	}
+	slope_force := carMassKg * 9.81 * incline_slope
+	sum_mgh += slope_force * step_distance
 
-	force := airResistance
+	force := airResistance + slope_force
 	work := force * step_distance
 
 	motorRpm := 60 * (velocity / wheelCircumference)
@@ -60,7 +66,9 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 		motorEfficiency = ((motorCurrent - 1.1) / (motorCurrent - .37)) - .02
 	}
 
-	return motorEfficiency * work
+	net_mgh_energy += (1.0 / motorEfficiency) * slope_force * step_distance
+
+	return motorEfficiency * work, centripetalForce
 }
 
 func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
@@ -154,14 +162,15 @@ func main() {
 	var forcePlot plotter.XYs
 	var energyPlot plotter.XYs
 	var curvaturePlot plotter.XYs
+	var elevPlot plotter.XYs
 
 	argIndex := 2
-	xOffset := 0.0
+	segmentStart := 0.0
 	tiempo := 0.00
 	velo := currentTickVelo
 	var trackDrawingVelocities = ""
 	var totalEnergyLost = 0.0
-	var maxAccel, minAccel, maxVelo, minVelo float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1)
+	var maxAccel, minAccel, maxVelo, minVelo, maxCentripital float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)
 	var colorOffsetVar = 0.0
 	for _, segmentLength := range segmentLengths {
 		//checking different accel and velocity for different curves
@@ -169,11 +178,11 @@ func main() {
 		argIndex++
 		b := args[argIndex] / segmentLength
 		argIndex++
-		c := currentTickAccel - a*math.Pow(xOffset, 2) - b*xOffset
+		c := currentTickAccel - a*math.Pow(segmentStart, 2) - b*segmentStart
 		var red = 255
 		var green = 0
 		var blue = 0
-		for x := xOffset; x <= xOffset+segmentLength; x += graphResolution {
+		for x := segmentStart; x <= segmentStart+segmentLength; x += graphResolution {
 			timeToTravel := graphResolution / currentTickVelo
 			currentTickAccel = a*math.Pow(x, 2) + b*x + c
 			currentTickVelo += currentTickAccel * timeToTravel
@@ -193,19 +202,25 @@ func main() {
 				minVelo = currentTickVelo
 			}
 
-			currentCurvature := curvatureSampling[int(float64(xOffset)/totalLength*float64(len(curvatureSampling)))]
-			currentElevation := elevationSampling[int(float64(xOffset)/totalLength*float64(len(elevationSampling)))]
+			currentCurvature := curvatureSampling[int(float64(x)/totalLength*float64(len(curvatureSampling)))]
+			currentElevation := inclineSlopeSampling[int(float64(x)/totalLength*float64(len(inclineSlopeSampling)))]
 
 			if currentCurvature > 500 {
 				currentCurvature = 0
 			}
 
-			var currentTickEnergy = CalculateWorkDone(currentTickVelo, currentCurvature, graphResolution, currentElevation)
+			var currentTickEnergy, currentTickCentripetal = CalculateWorkDone(currentTickVelo, currentCurvature, graphResolution, currentElevation)
+
+			if currentTickCentripetal > maxCentripital {
+				maxCentripital = currentTickCentripetal
+			}
+
 			totalEnergyLost += currentTickEnergy
 			accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
 			veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
 			energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
 			curvaturePlot = append(curvaturePlot, plotter.XY{X: x, Y: currentCurvature})
+			elevPlot = append(elevPlot, plotter.XY{X: x, Y: currentElevation})
 
 			//converts and makes velocity string
 			colorOffsetStr := strconv.FormatFloat(colorOffsetVar/totalLength, 'f', 4, 64)
@@ -226,7 +241,7 @@ func main() {
 		velo += (a/3)*(math.Pow(segmentLength, 3)) + (b/2)*(math.Pow(segmentLength, 2)) + c*(segmentLength)
 		tiempo += simpson(0.00, float64(segmentLength), a, b, c, velo, 50)
 
-		xOffset += segmentLength
+		segmentStart += segmentLength
 	}
 
 	if graphOutput {
@@ -237,6 +252,7 @@ func main() {
 		outputGraph(forcePlot, "./plots/force.png")
 		outputGraph(energyPlot, "./plots/energy.png")
 		outputGraph(curvaturePlot, "./plots/curvature.png")
+		outputGraph(elevPlot, "./plots/elevation.png")
 
 		// fmt.Println(trackDrawingVelocities)
 	}
@@ -247,9 +263,12 @@ func main() {
 	fmt.Println("Min Velocity (m/s):", minVelo)
 	fmt.Println("Max Acceleration (m/s^2):", maxAccel)
 	fmt.Println("Min Acceleration (m/s^2):", minAccel)
+	fmt.Println("Max Centripetal Force (N): ", maxCentripital)
 	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
 	fmt.Println("Time Elapsed (s): ", tiempo)
 	fmt.Println("Energy Consumed (J): ", energyPlot[len(energyPlot)-1].Y)
 	fmt.Println("Energy Consumption (W): ", energyPlot[len(energyPlot)-1].Y/tiempo)
 
+	fmt.Println(sum_mgh)
+	fmt.Println(net_mgh_energy)
 }
