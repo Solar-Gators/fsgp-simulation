@@ -13,12 +13,11 @@ import (
 )
 
 // CONSTANT DEFINITIONS:
-// track shape:
-var curvatureSampling = []float64{1000, 31.83, 1000, 31.83}
 var segmentLengths = []float64{200, 100, 200, 100}
 
-// elevation data, evenly sampled over entire track
-var elevations = []float64{10, 0, 10}
+// elevation/curvature data, evenly sampled over entire track
+var elevationSampling = []float64{10, 0, 10}
+var curvatureSampling = []float64{1000, 31.83, 1000, 31.83}
 
 // number of points in the graph to compute:
 const numTicks = 1000
@@ -31,14 +30,12 @@ const numTicks = 1000
 // 2-4: parabola params
 // next 3: parabola params
 
-func CalculateWorkDone(velocity float64, curvature float64, step_distance float64) float64 {
+func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, elevation float64) float64 {
 	const carMassKg = 298.0
 	const dragCoefficient = 0.1275
 	const wheelCircumference = 1.875216
 
 	airResistance := dragCoefficient * math.Pow(velocity, 2)
-
-	// todo slope of elevation
 
 	var centripitalForce float64
 	if curvature == 0 {
@@ -47,7 +44,11 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 		centripitalForce = (math.Pow(velocity, 2) / math.Abs(curvature)) * carMassKg
 	}
 
-	force := airResistance + centripitalForce
+	if centripitalForce > 19.6 {
+		println("Car flipped!")
+	}
+
+	force := airResistance
 	work := force * step_distance
 
 	motorRpm := 60 * (velocity / wheelCircumference)
@@ -193,12 +194,13 @@ func main() {
 			}
 
 			currentCurvature := curvatureSampling[int(float64(xOffset)/totalLength*float64(len(curvatureSampling)))]
+			currentElevation := elevationSampling[int(float64(xOffset)/totalLength*float64(len(elevationSampling)))]
 
 			if currentCurvature > 500 {
 				currentCurvature = 0
 			}
 
-			var currentTickEnergy = CalculateWorkDone(currentTickVelo, currentCurvature, graphResolution)
+			var currentTickEnergy = CalculateWorkDone(currentTickVelo, currentCurvature, graphResolution, currentElevation)
 			totalEnergyLost += currentTickEnergy
 			accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
 			veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
