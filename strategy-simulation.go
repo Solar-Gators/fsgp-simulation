@@ -30,12 +30,6 @@ const numTicks = 1000
 // 2-4: parabola params
 // next 3: parabola params
 
-// this should sum to 0 at the end
-var sum_mgh = 0.0
-
-// this is to test if elevation even matters
-var net_hill_speedup_work = 0.0
-
 // returns (work done, centripetal force)
 func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, sinAngle float64) (float64, float64) {
 	const carMassKg = 298.0
@@ -52,12 +46,9 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 	}
 	//mgsin(theta)
 	slope_force := carMassKg * 9.81 * sinAngle
-	//force * distance
-	sum_mgh += slope_force * step_distance
 
-	//TOTAL FORCE
-	force := airResistance + slope_force
-	work := force * step_distance
+	total_force := airResistance + slope_force
+	total_work := total_force * step_distance
 
 	//Calculating motor efficiency (function of velocity)
 	motorRpm := 60 * (velocity / wheelCircumference)
@@ -69,10 +60,7 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 		motorEfficiency = ((motorCurrent - 1.1) / (motorCurrent - .37)) - .02
 	}
 
-	//Calculating the work done because the slope changes the speed and thus the motor efficiency (not mgh) (Brachistochrone)
-	net_hill_speedup_work += (1.0 / motorEfficiency) * slope_force * step_distance
-
-	return motorEfficiency * work, centripetalForce
+	return motorEfficiency * total_work, centripetalForce
 }
 
 func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
@@ -272,7 +260,4 @@ func main() {
 	fmt.Println("Time Elapsed (s): ", tiempo)
 	fmt.Println("Energy Consumed (J): ", energyPlot[len(energyPlot)-1].Y)
 	fmt.Println("Energy Consumption (W): ", energyPlot[len(energyPlot)-1].Y/tiempo)
-
-	fmt.Println(sum_mgh)
-	fmt.Println(net_hill_speedup_work)
 }
