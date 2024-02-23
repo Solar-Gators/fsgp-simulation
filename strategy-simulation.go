@@ -34,10 +34,10 @@ const numTicks = 1000
 var sum_mgh = 0.0
 
 // this is to test if elevation even matters
-var net_mgh_energy = 0.0
+var net_hill_speedup_work = 0.0
 
 // returns (work done, centripetal force)
-func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, incline_slope float64) (float64, float64) {
+func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, sinAngle float64) (float64, float64) {
 	const carMassKg = 298.0
 	const dragCoefficient = 0.1275
 	const wheelCircumference = 1.875216
@@ -50,13 +50,16 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 	} else {
 		centripetalForce = (math.Pow(velocity, 2) / math.Abs(curvature)) * carMassKg
 	}
-
-	slope_force := carMassKg * 9.81 * incline_slope
+	//mgsin(theta)
+	slope_force := carMassKg * 9.81 * sinAngle
+	//force * distance
 	sum_mgh += slope_force * step_distance
 
+	//TOTAL FORCE
 	force := airResistance + slope_force
 	work := force * step_distance
 
+	//Calculating motor efficiency (function of velocity)
 	motorRpm := 60 * (velocity / wheelCircumference)
 	motorCurrent := (-3*motorRpm - 2700) / 13
 	var motorEfficiency float64
@@ -66,7 +69,8 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 		motorEfficiency = ((motorCurrent - 1.1) / (motorCurrent - .37)) - .02
 	}
 
-	net_mgh_energy += (1.0 / motorEfficiency) * slope_force * step_distance
+	//Calculating the work done because the slope changes the speed and thus the motor efficiency (not mgh) (Brachistochrone)
+	net_hill_speedup_work += (1.0 / motorEfficiency) * slope_force * step_distance
 
 	return motorEfficiency * work, centripetalForce
 }
@@ -170,7 +174,7 @@ func main() {
 	velo := currentTickVelo
 	var trackDrawingVelocities = ""
 	var totalEnergyLost = 0.0
-	var maxAccel, minAccel, maxVelo, minVelo, maxCentripital float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)
+	var maxAccel, minAccel, maxVelo, minVelo, maxCentripetal float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)
 	var colorOffsetVar = 0.0
 	for _, segmentLength := range segmentLengths {
 		//checking different accel and velocity for different curves
@@ -211,7 +215,7 @@ func main() {
 
 			var currentTickEnergy, currentTickCentripetal = CalculateWorkDone(currentTickVelo, currentCurvature, graphResolution, currentElevation)
 
-			if currentTickCentripetal > maxCentripital {
+			if currentTickCentripetal > maxCentripetal {
 				maxCentripital = currentTickCentripetal
 			}
 
@@ -263,12 +267,12 @@ func main() {
 	fmt.Println("Min Velocity (m/s):", minVelo)
 	fmt.Println("Max Acceleration (m/s^2):", maxAccel)
 	fmt.Println("Min Acceleration (m/s^2):", minAccel)
-	fmt.Println("Max Centripetal Force (N): ", maxCentripital)
+	fmt.Println("Max Centripetal Force (N): ", maxCentripetal)
 	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
 	fmt.Println("Time Elapsed (s): ", tiempo)
 	fmt.Println("Energy Consumed (J): ", energyPlot[len(energyPlot)-1].Y)
 	fmt.Println("Energy Consumption (W): ", energyPlot[len(energyPlot)-1].Y/tiempo)
 
 	fmt.Println(sum_mgh)
-	fmt.Println(net_mgh_energy)
+	fmt.Println(net_hill_speedup_work)
 }
