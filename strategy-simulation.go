@@ -204,7 +204,7 @@ func main() {
 			var currentTickEnergy, currentTickCentripetal = CalculateWorkDone(currentTickVelo, currentCurvature, graphResolution, currentElevation)
 
 			if currentTickCentripetal > maxCentripetal {
-				maxCentripital = currentTickCentripetal
+				maxCentripetal = currentTickCentripetal
 			}
 
 			totalEnergyLost += currentTickEnergy
