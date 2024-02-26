@@ -9,9 +9,11 @@ from mystic.strategy import Best1Bin
 from mystic.termination import VTR
 
 CALLS_BETWEEN_IMAGE = 20
-MAX_VELOCITY = 40.0
+MAX_VELOCITY_ALLOWED = 40.0
+MAX_ACCELERATION_ALLOWED = 3.0  # m/s^2
+MAX_DECCELERATION_ALLOWED = 3.0
 MAX_ENERGY_CONS = 1300
-MAX_ACCELERATION = 3.0  # m/s^2
+MAX_CENTRIPETAL_ALLOWED = 3.0  # m/s^2
 
 try:
     subprocess.run(["go", "build", "."])
@@ -55,52 +57,50 @@ def get_output(x):
     return output_cache[x_tuple]
 
 
-def objective(x):
-    output = get_output(x)
+def parse_value(value):
+    return float(output.split(value)[1].split("\n")[0])
+
+
+def objective(strategy_to_test):
+    output = get_output(strategy_to_test)
     try:
-        # Parse the output for the required values
-        time_elapsed = float(output.split("Time Elapsed (s):")[1].split("\n")[0])
-        energy_consumption = float(
-            output.split("Energy Consumption (W):")[1].split("\n")[0]
-        )
-        initial_velocity = abs(
-            float(output.split("Initial Velocity (m/s):")[1].split("\n")[0])
-        )
-        final_velocity = float(output.split("Final Velocity (m/s):")[1].split("\n")[0])
-        max_velocity = float(output.split("Max Velocity (m/s):")[1].split("\n")[0])
-        min_velocity = float(output.split("Min Velocity (m/s):")[1].split("\n")[0])
-        max_acceleration = float(
-            output.split("Max Acceleration (m/s^2):")[1].split("\n")[0]
-        )
-        min_acceleration = float(
-            output.split("Min Acceleration (m/s^2):")[1].split("\n")[0]
-        )
+        time_elapsed = parse_value("Time Elapsed (s):")
+        energy_consumption = parse_value("Energy Consumption (W):")
+        initial_velocity = parse_value("Initial Velocity (m/s):")
+        final_velocity = parse_value("Final Velocity (m/s):")
+        max_velocity = parse_value("Max Velocity (m/s):")
+        min_velocity = parse_value("Min Velocity (m/s):")
+        max_acceleration = parse_value("Max Acceleration (m/s^2):")
+        min_acceleration = parse_value("Min Acceleration (m/s^2):")
+
+        objective_value = time_elapsed
 
         # Check energy consumption constraint
         if energy_consumption > MAX_ENERGY_CONS or energy_consumption < 0:
-            time_elapsed += (abs(energy_consumption - MAX_ENERGY_CONS) + 1) * 100
+            objective_value += abs(energy_consumption - MAX_ENERGY_CONS) * 100
 
         # Check velocity constraints
-        if max_velocity > MAX_VELOCITY:
-            time_elapsed += (max_velocity - MAX_VELOCITY + 1) * 100
+        if max_velocity > MAX_VELOCITY_ALLOWED:
+            objective_value += (max_velocity - MAX_VELOCITY_ALLOWED) * 100
 
         if min_velocity < 0:
-            time_elapsed += (abs(min_velocity) + 1) * 100
+            objective_value += abs(min_velocity) * 100
 
-        if max_acceleration > MAX_ACCELERATION:
-            time_elapsed += (max_acceleration - MAX_ACCELERATION + 1) * 100
+        if max_acceleration > MAX_ACCELERATION_ALLOWED:
+            objective_value += (max_acceleration - MAX_ACCELERATION_ALLOWED) * 100
 
-        if abs(min_acceleration) > MAX_ACCELERATION:
-            time_elapsed += (abs(min_acceleration) - MAX_ACCELERATION + 1) * 100
+        if min_acceleration < -MAX_DECCELERATION_ALLOWED:
+            objective_value += (abs(min_acceleration) - MAX_DECCELERATION_ALLOWED) * 100
 
         # Check the percentage difference constraint
         velocity_difference = abs(final_velocity - initial_velocity)
-        time_elapsed += (abs(velocity_difference) + 1) * 100
+
+        objective_value += abs(velocity_difference) * 100
 
         # If all constraints are satisfied, return the time elapsed
         return (
-            time_elapsed
-            if time_elapsed != float("inf") and time_elapsed >= 0
+            objective_value
+            if objective_value != float("inf") and objective_value >= 0
             else sys.float_info.max
         )
     except (ValueError, IndexError, OverflowError):
@@ -111,7 +111,7 @@ def objective(x):
 # Initialization
 expected_args = get_expected_argument_count()
 npts = 20  # Number of points in the lattice (adjust based on problem size)
-bounds = [(0, MAX_VELOCITY)] * expected_args  # Assuming bounds are known
+bounds = [(0, MAX_VELOCITY_ALLOWED)] * expected_args  # Assuming bounds are known
 mon = VerboseMonitor(10)
 
 # Configure and solve using LatticeSolver
