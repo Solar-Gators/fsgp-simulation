@@ -57,21 +57,22 @@ def get_output(x):
     return output_cache[x_tuple]
 
 
-def parse_value(value):
+def parse_value(value, output):
     return float(output.split(value)[1].split("\n")[0])
 
 
 def objective(strategy_to_test):
     output = get_output(strategy_to_test)
     try:
-        time_elapsed = parse_value("Time Elapsed (s):")
-        energy_consumption = parse_value("Energy Consumption (W):")
-        initial_velocity = parse_value("Initial Velocity (m/s):")
-        final_velocity = parse_value("Final Velocity (m/s):")
-        max_velocity = parse_value("Max Velocity (m/s):")
-        min_velocity = parse_value("Min Velocity (m/s):")
-        max_acceleration = parse_value("Max Acceleration (m/s^2):")
-        min_acceleration = parse_value("Min Acceleration (m/s^2):")
+        time_elapsed = parse_value("Time Elapsed (s):", output)
+        energy_consumption = parse_value("Energy Consumption (W):", output)
+        initial_velocity = parse_value("Initial Velocity (m/s):", output)
+        final_velocity = parse_value("Final Velocity (m/s):", output)
+        max_velocity = parse_value("Max Velocity (m/s):", output)
+        min_velocity = parse_value("Min Velocity (m/s):", output)
+        max_acceleration = parse_value("Max Acceleration (m/s^2):", output)
+        min_acceleration = parse_value("Min Acceleration (m/s^2):", output)
+        max_centripetal_force = parse_value("Max Centripetal Force (N):", output)
 
         objective_value = time_elapsed
 
@@ -91,6 +92,9 @@ def objective(strategy_to_test):
 
         if min_acceleration < -MAX_DECCELERATION_ALLOWED:
             objective_value += (abs(min_acceleration) - MAX_DECCELERATION_ALLOWED) * 100
+
+        if max_centripetal_force > MAX_CENTRIPETAL_ALLOWED:
+            objective_value += (MAX_CENTRIPETAL_ALLOWED-max_centripetal_force) * 100
 
         # Check the percentage difference constraint
         velocity_difference = abs(final_velocity - initial_velocity)
