@@ -30,7 +30,7 @@ const numTicks = 1000
 // 2-4: parabola params
 // next 3: parabola params
 
-// returns (work done, centripetal force)
+// returns (work done, centripetal acceleration)
 func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, sinAngle float64) (float64, float64) {
 	const carMassKg = 298.0
 	const dragCoefficient = 0.1275
@@ -38,11 +38,11 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 
 	airResistance := dragCoefficient * math.Pow(velocity, 2)
 
-	var centripetalForce float64
+	var centripetalAccel float64
 	if curvature == 0 {
-		centripetalForce = 0
+		centripetalAccel = 0
 	} else {
-		centripetalForce = (math.Pow(velocity, 2) / math.Abs(curvature)) * carMassKg
+		centripetalAccel = (math.Pow(velocity, 2) / math.Abs(curvature))
 	}
 	//mgsin(theta)
 	slope_force := carMassKg * 9.81 * sinAngle
@@ -60,7 +60,7 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 		motorEfficiency = ((motorCurrent - 1.1) / (motorCurrent - .37)) - .02
 	}
 
-	return motorEfficiency * total_work, centripetalForce
+	return motorEfficiency * total_work, centripetalAccel
 }
 
 func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
@@ -170,13 +170,13 @@ func main() {
 		argIndex++
 		b := args[argIndex] / segmentLength
 		argIndex++
-		c := currentTickAccel - a*math.Pow(segmentStart, 2) - b*segmentStart
+		c := currentTickAccel
 		var red = 255
 		var green = 0
 		var blue = 0
 		for x := segmentStart; x <= segmentStart+segmentLength; x += graphResolution {
 			timeToTravel := graphResolution / currentTickVelo
-			currentTickAccel = a*math.Pow(x, 2) + b*x + c
+			currentTickAccel = a*math.Pow(x-segmentStart, 2) + b*(x-segmentStart) + c
 			currentTickVelo += currentTickAccel * timeToTravel
 
 			if currentTickAccel > maxAccel {
@@ -255,7 +255,7 @@ func main() {
 	fmt.Println("Min Velocity (m/s):", minVelo)
 	fmt.Println("Max Acceleration (m/s^2):", maxAccel)
 	fmt.Println("Min Acceleration (m/s^2):", minAccel)
-	fmt.Println("Max Centripetal Force (N): ", maxCentripetal)
+	fmt.Println("Max Centripetal Acceleration (m/s^2): ", maxCentripetal)
 	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
 	fmt.Println("Time Elapsed (s): ", tiempo)
 	fmt.Println("Energy Consumed (J): ", energyPlot[len(energyPlot)-1].Y)
