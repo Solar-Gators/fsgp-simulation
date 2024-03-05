@@ -17,7 +17,7 @@ var segmentLengths = []float64{200, 100, 200, 100}
 
 // elevation/curvature data, evenly sampled over entire track
 var inclineSlopeSampling = []float64{0.05, -0.05, 0.05, -0.05}
-var curvatureSampling = []float64{1000, 31.83, 1000, 31.83}
+var curvatureSampling = []float64{1000, 1000, 31.83, 1000, 1000, 31.83}
 
 // number of points in the graph to compute:
 const numTicks = 1000
