@@ -176,10 +176,11 @@ func main() {
 		var red = 255
 		var green = 0
 		var blue = 0
-		for x := segmentStart; x <= segmentStart+segmentLength; x += graphResolution {
+		for i := 0.0; i < segmentLength; i += graphResolution {
+			track_pos := segmentStart + i
 			timeToTravel := graphResolution / currentTickVelo
-			currentTickAccel = a*math.Pow(x-segmentStart, 2) + b*(x-segmentStart) + c
 			prevVelo = currentTickVelo
+			currentTickAccel = a*math.Pow(i, 2) + b*i + c
 			currentTickVelo += currentTickAccel * timeToTravel
 
 			if currentTickAccel > maxAccel {
@@ -197,8 +198,8 @@ func main() {
 				minVelo = currentTickVelo
 			}
 
-			currentCurvature := curvatureSampling[int(float64(x)/totalLength*float64(len(curvatureSampling)))]
-			currentElevation := inclineSlopeSampling[int(float64(x)/totalLength*float64(len(inclineSlopeSampling)))]
+			currentCurvature := curvatureSampling[int(float64(track_pos)/totalLength*float64(len(curvatureSampling)))]
+			currentElevation := inclineSlopeSampling[int(float64(track_pos)/totalLength*float64(len(inclineSlopeSampling)))]
 
 			if currentCurvature > 500 {
 				currentCurvature = 0
@@ -211,11 +212,11 @@ func main() {
 			}
 
 			totalEnergyLost += currentTickEnergy
-			accelPlot = append(accelPlot, plotter.XY{X: x, Y: currentTickAccel})
-			veloPlot = append(veloPlot, plotter.XY{X: x, Y: currentTickVelo})
-			energyPlot = append(energyPlot, plotter.XY{X: x, Y: totalEnergyLost})
-			curvaturePlot = append(curvaturePlot, plotter.XY{X: x, Y: currentCurvature})
-			elevPlot = append(elevPlot, plotter.XY{X: x, Y: currentElevation})
+			accelPlot = append(accelPlot, plotter.XY{X: track_pos, Y: currentTickAccel})
+			veloPlot = append(veloPlot, plotter.XY{X: track_pos, Y: currentTickVelo})
+			energyPlot = append(energyPlot, plotter.XY{X: track_pos, Y: totalEnergyLost})
+			curvaturePlot = append(curvaturePlot, plotter.XY{X: track_pos, Y: currentCurvature})
+			elevPlot = append(elevPlot, plotter.XY{X: track_pos, Y: currentElevation})
 
 			//converts and makes velocity string
 			colorOffsetStr := strconv.FormatFloat(colorOffsetVar/totalLength, 'f', 4, 64)
