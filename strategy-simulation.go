@@ -149,6 +149,7 @@ func main() {
 	var energyPlot plotter.XYs
 	var curvaturePlot plotter.XYs
 	var elevPlot plotter.XYs
+	var centripetalPlot plotter.XYs
 
 	argIndex := 2
 	segmentStart := 0.0
@@ -156,7 +157,7 @@ func main() {
 	velo := currentTickVelo
 	prevVelo := 0.0
 	var trackDrawingVelocities = ""
-	var totalEnergyLost = 0.0
+	var totalEnergyUsed = 0.0
 	var maxAccel, minAccel, maxVelo, minVelo, maxCentripetal float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)
 	var colorOffsetVar = 0.0
 	for _, segmentLength := range segmentLengths {
@@ -166,9 +167,6 @@ func main() {
 		b := args[argIndex] / segmentLength
 		argIndex++
 		c := currentTickAccel
-		var red = 255
-		var green = 0
-		var blue = 0
 		for i := 0.0; i < segmentLength; i += graphResolution {
 			track_pos := segmentStart + i
 			timeToTravel := graphResolution / currentTickVelo
@@ -176,60 +174,45 @@ func main() {
 			currentTickAccel = a*math.Pow(i, 2) + b*i + c
 			currentTickVelo += currentTickAccel * timeToTravel
 
-			if currentTickAccel > maxAccel {
-				maxAccel = currentTickAccel
-			}
-			if currentTickAccel < minAccel {
-				minAccel = currentTickAccel
-			}
-
-			// Update max and min velocity
-			if currentTickVelo > maxVelo {
-				maxVelo = currentTickVelo
-			}
-			if currentTickVelo < minVelo {
-				minVelo = currentTickVelo
-			}
+			maxAccel = max(maxAccel, currentTickAccel)
+			minAccel = min(minAccel, currentTickAccel)
+			maxVelo = max(maxVelo, currentTickVelo)
+			minVelo = min(minVelo, currentTickVelo)
 
 			currentCurvature := curvatureSampling[int(float64(track_pos)/totalLength*float64(len(curvatureSampling)))]
 			currentElevation := inclineSlopeSampling[int(float64(track_pos)/totalLength*float64(len(inclineSlopeSampling)))]
 
+			var currentTickCentripetal = 0.0
 			if currentCurvature > 500 {
 				currentCurvature = 0
+			} else {
+				maxCentripetal = max(maxCentripetal, currentTickCentripetal)
+				currentTickCentripetal = (math.Pow(currentTickVelo, 2) / math.Abs(currentCurvature))
 			}
 
 			var currentTickEnergy = CalculateWorkDone(currentTickVelo, graphResolution, currentElevation, prevVelo)
 
-			var centripetalAccel float64
-			if currentCurvature == 0 {
-				centripetalAccel = 0
-			} else {
-				centripetalAccel = (math.Pow(currentTickVelo, 2) / math.Abs(currentCurvature))
-			}
-			if centripetalAccel > maxCentripetal {
-				maxCentripetal = centripetalAccel
-			}
-
-			totalEnergyLost += currentTickEnergy
+			totalEnergyUsed += currentTickEnergy
 			accelPlot = append(accelPlot, plotter.XY{X: track_pos, Y: currentTickAccel})
 			veloPlot = append(veloPlot, plotter.XY{X: track_pos, Y: currentTickVelo})
-			energyPlot = append(energyPlot, plotter.XY{X: track_pos, Y: totalEnergyLost})
+			energyPlot = append(energyPlot, plotter.XY{X: track_pos, Y: totalEnergyUsed})
 			curvaturePlot = append(curvaturePlot, plotter.XY{X: track_pos, Y: currentCurvature})
 			elevPlot = append(elevPlot, plotter.XY{X: track_pos, Y: currentElevation})
-
-			//converts and makes velocity string
-			colorOffsetStr := strconv.FormatFloat(colorOffsetVar/totalLength, 'f', 4, 64)
+			centripetalPlot = append(centripetalPlot, plotter.XY{X: track_pos, Y: currentTickCentripetal})
 
 			// if statment only needed to prevent printing final point
 			if graphOutput && colorOffsetVar/totalLength <= 1.0 {
-				trackDrawingVelocities += "<stop offset=\"" + colorOffsetStr + "\" style=\"stop-color:rgb(" + strconv.Itoa(red) + "," + strconv.Itoa(green) + "," + strconv.Itoa(blue) + ");stop-opacity:1\"/>\n"
+				//max of 16 units of speed... can change scale later by putting in for denominator
+				const redDivisor = 16
+
+				const blue = 0
+				const green = 0
+				//converts and makes velocity string
+				colorOffsetStr := strconv.FormatFloat(colorOffsetVar/totalLength, 'f', 4, 64)
+
+				trackDrawingVelocities += "<stop offset=\"" + colorOffsetStr + "\" style=\"stop-color:rgb(" + strconv.Itoa(int(math.Round(255*currentTickVelo/redDivisor))) + "," + strconv.Itoa(green) + "," + strconv.Itoa(blue) + ");stop-opacity:1\"/>\n"
 
 				colorOffsetVar += graphResolution
-
-				//max of 16 units of speed... can change scale later by putting in for denominator
-				red = int(math.Round(255 * currentTickVelo / 16))
-				blue = 0
-				green = 0
 			}
 		}
 
@@ -248,6 +231,7 @@ func main() {
 		outputGraph(energyPlot, "./plots/energy.png")
 		outputGraph(curvaturePlot, "./plots/curvature.png")
 		outputGraph(elevPlot, "./plots/elevation.png")
+		outputGraph(centripetalPlot, "./plots/centripetal.png")
 
 		// fmt.Println(trackDrawingVelocities)
 	}
