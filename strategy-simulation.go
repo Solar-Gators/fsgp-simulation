@@ -23,7 +23,7 @@ var curvatureSampling = []float64{1000, 31.83, 1000, 31.83}
 const numTicks = 1000
 
 // input arguments:
-
+// Solver dictates the velo and accel. Sim dicatates energy required to execute and time elasped. Solver constrained by energy, optimized for time.
 // initial velocity, initial acceleration, then accel curve params
 // 0: initial velocity
 // 1: initial acceleration
@@ -31,7 +31,7 @@ const numTicks = 1000
 // next 3: parabola params
 
 // returns (work done, centripetal acceleration)
-func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, sinAngle float64) (float64, float64) {
+func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, sinAngle float64, prev_velo float64) (float64, float64) {
 	const carMassKg = 298.0
 	const dragCoefficient = 0.1275
 	const wheelCircumference = 1.875216
@@ -46,9 +46,9 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 	}
 	//mgsin(theta)
 	slope_force := carMassKg * 9.81 * sinAngle
-
+	net_velo_energy := .5 * carMassKg * (velocity - prev_velo)
 	total_force := airResistance + slope_force
-	total_work := total_force * step_distance
+	total_work := total_force*step_distance + net_velo_energy
 
 	//Calculating motor efficiency (function of velocity)
 	motorRpm := 60 * (velocity / wheelCircumference)
@@ -60,6 +60,7 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 		motorEfficiency = ((motorCurrent - 1.1) / (motorCurrent - .37)) - .02
 	}
 
+	//work motor does is "positive"
 	return motorEfficiency * total_work, centripetalAccel
 }
 
@@ -160,6 +161,7 @@ func main() {
 	segmentStart := 0.0
 	tiempo := 0.00
 	velo := currentTickVelo
+	prevVelo := 0.0
 	var trackDrawingVelocities = ""
 	var totalEnergyLost = 0.0
 	var maxAccel, minAccel, maxVelo, minVelo, maxCentripetal float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)
@@ -177,6 +179,7 @@ func main() {
 		for x := segmentStart; x <= segmentStart+segmentLength; x += graphResolution {
 			timeToTravel := graphResolution / currentTickVelo
 			currentTickAccel = a*math.Pow(x-segmentStart, 2) + b*(x-segmentStart) + c
+			prevVelo = currentTickVelo
 			currentTickVelo += currentTickAccel * timeToTravel
 
 			if currentTickAccel > maxAccel {
@@ -201,7 +204,7 @@ func main() {
 				currentCurvature = 0
 			}
 
-			var currentTickEnergy, currentTickCentripetal = CalculateWorkDone(currentTickVelo, currentCurvature, graphResolution, currentElevation)
+			var currentTickEnergy, currentTickCentripetal = CalculateWorkDone(currentTickVelo, currentCurvature, graphResolution, currentElevation, prevVelo)
 
 			if currentTickCentripetal > maxCentripetal {
 				maxCentripetal = currentTickCentripetal
