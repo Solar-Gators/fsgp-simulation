@@ -30,20 +30,13 @@ const numTicks = 1000
 // 2-4: parabola params
 // next 3: parabola params
 
-// returns (work done, centripetal acceleration)
-func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, sinAngle float64, prev_velo float64) (float64, float64) {
+func CalculateWorkDone(velocity float64, step_distance float64, sinAngle float64, prev_velo float64) float64 {
 	const carMassKg = 298.0
 	const dragCoefficient = 0.1275
 	const wheelCircumference = 1.875216
 
 	airResistance := dragCoefficient * math.Pow(velocity, 2)
 
-	var centripetalAccel float64
-	if curvature == 0 {
-		centripetalAccel = 0
-	} else {
-		centripetalAccel = (math.Pow(velocity, 2) / math.Abs(curvature))
-	}
 	//mgsin(theta)
 	slope_force := carMassKg * 9.81 * sinAngle
 	net_velo_energy := .5 * carMassKg * (velocity - prev_velo)
@@ -60,8 +53,8 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 		motorEfficiency = ((motorCurrent - 1.1) / (motorCurrent - .37)) - .02
 	}
 
-	//work motor does is "positive"
-	return motorEfficiency * total_work, centripetalAccel
+	// work motor does is "positive"
+	return motorEfficiency * total_work
 }
 
 func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
@@ -205,10 +198,16 @@ func main() {
 				currentCurvature = 0
 			}
 
-			var currentTickEnergy, currentTickCentripetal = CalculateWorkDone(currentTickVelo, currentCurvature, graphResolution, currentElevation, prevVelo)
+			var currentTickEnergy = CalculateWorkDone(currentTickVelo, graphResolution, currentElevation, prevVelo)
 
-			if currentTickCentripetal > maxCentripetal {
-				maxCentripetal = currentTickCentripetal
+			var centripetalAccel float64
+			if currentCurvature == 0 {
+				centripetalAccel = 0
+			} else {
+				centripetalAccel = (math.Pow(currentTickVelo, 2) / math.Abs(currentCurvature))
+			}
+			if centripetalAccel > maxCentripetal {
+				maxCentripetal = centripetalAccel
 			}
 
 			totalEnergyLost += currentTickEnergy
