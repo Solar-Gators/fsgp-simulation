@@ -23,7 +23,7 @@ var curvatureSampling = []float64{1000, 31.83, 1000, 31.83}
 const numTicks = 1000
 
 // input arguments:
-// Solver dictates the velo and accel' .go file dicatates the energy required by the solver solution. Solver constrained by energy, optimized for time..
+// Solver dictates the velo and accel. Sim dicatates energy required to execute and time elasped. Solver constrained by energy, optimized for time.
 // initial velocity, initial acceleration, then accel curve params
 // 0: initial velocity
 // 1: initial acceleration
@@ -35,7 +35,7 @@ const numTicks = 1000
 func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, sinAngle float64) (float64, float64) {
 =======
 // returns (work done, centripetal acceleration)
-func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, sinAngle float64, prevVelo float64) (float64, float64) {
+func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, sinAngle float64, prev_velo float64) (float64, float64) {
 >>>>>>> Stashed changes
 	const carMassKg = 298.0
 	const dragCoefficient = 0.1275
@@ -51,9 +51,9 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 	}
 	//mgsin(theta)
 	slope_force := carMassKg * 9.81 * sinAngle
-	KE := .5 * carMassKg * (velocity - prevVelo)
+	net_velo_energy := .5 * carMassKg * (velocity - prev_velo)
 	total_force := airResistance + slope_force
-	total_work := total_force*step_distance + KE
+	total_work := total_force*step_distance + net_velo_energy
 
 	//Calculating motor efficiency (function of velocity)
 	motorRpm := 60 * (velocity / wheelCircumference)
