@@ -23,15 +23,20 @@ var curvatureSampling = []float64{1000, 31.83, 1000, 31.83}
 const numTicks = 1000
 
 // input arguments:
-
+// Solver dictates the velo and accel' .go file dicatates the energy required by the solver solution. Solver constrained by energy, optimized for time..
 // initial velocity, initial acceleration, then accel curve params
 // 0: initial velocity
 // 1: initial acceleration
 // 2-4: parabola params
 // next 3: parabola params
 
+<<<<<<< Updated upstream
 // returns (work done, centripetal force)
 func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, sinAngle float64) (float64, float64) {
+=======
+// returns (work done, centripetal acceleration)
+func CalculateWorkDone(velocity float64, curvature float64, step_distance float64, sinAngle float64, prevVelo float64) (float64, float64) {
+>>>>>>> Stashed changes
 	const carMassKg = 298.0
 	const dragCoefficient = 0.1275
 	const wheelCircumference = 1.875216
@@ -46,9 +51,9 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 	}
 	//mgsin(theta)
 	slope_force := carMassKg * 9.81 * sinAngle
-
+	KE := .5 * carMassKg * (velocity - prevVelo)
 	total_force := airResistance + slope_force
-	total_work := total_force * step_distance
+	total_work := total_force*step_distance + KE
 
 	//Calculating motor efficiency (function of velocity)
 	motorRpm := 60 * (velocity / wheelCircumference)
@@ -59,8 +64,13 @@ func CalculateWorkDone(velocity float64, curvature float64, step_distance float6
 	} else {
 		motorEfficiency = ((motorCurrent - 1.1) / (motorCurrent - .37)) - .02
 	}
+<<<<<<< Updated upstream
 
 	return motorEfficiency * total_work, centripetalForce
+=======
+	//work motor does is "positive"
+	return motorEfficiency * total_work, centripetalAccel
+>>>>>>> Stashed changes
 }
 
 func integrand(x float64, q float64, w float64, e float64, r float64) float64 {
@@ -160,6 +170,7 @@ func main() {
 	segmentStart := 0.0
 	tiempo := 0.00
 	velo := currentTickVelo
+	prevVelo := 0.0
 	var trackDrawingVelocities = ""
 	var totalEnergyLost = 0.0
 	var maxAccel, minAccel, maxVelo, minVelo, maxCentripetal float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)
@@ -176,7 +187,12 @@ func main() {
 		var blue = 0
 		for x := segmentStart; x <= segmentStart+segmentLength; x += graphResolution {
 			timeToTravel := graphResolution / currentTickVelo
+<<<<<<< Updated upstream
 			currentTickAccel = a*math.Pow(x, 2) + b*x + c
+=======
+			currentTickAccel = a*math.Pow(x-segmentStart, 2) + b*(x-segmentStart) + c
+			prevVelo = currentTickVelo
+>>>>>>> Stashed changes
 			currentTickVelo += currentTickAccel * timeToTravel
 
 			if currentTickAccel > maxAccel {
@@ -201,7 +217,7 @@ func main() {
 				currentCurvature = 0
 			}
 
-			var currentTickEnergy, currentTickCentripetal = CalculateWorkDone(currentTickVelo, currentCurvature, graphResolution, currentElevation)
+			var currentTickEnergy, currentTickCentripetal = CalculateWorkDone(currentTickVelo, currentCurvature, graphResolution, currentElevation, prevVelo)
 
 			if currentTickCentripetal > maxCentripetal {
 				maxCentripital = currentTickCentripetal
