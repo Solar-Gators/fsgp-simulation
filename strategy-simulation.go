@@ -17,6 +17,8 @@ var segmentLengths = []float64{200, 100, 200, 100}
 
 // elevation/curvature data, evenly sampled over entire track
 var inclineSlopeSampling = []float64{0.05, -0.05, 0.05, -0.05}
+
+// positive curvature is clockwise, negative is counterclockwise
 var curvatureSampling = []float64{1000, 1000, 31.83, 1000, 1000, 31.83}
 
 // number of points in the graph to compute:
@@ -137,8 +139,8 @@ func main() {
 		totalLength += segmentLengths[i]
 	}
 
-	var graphResolution float64 = 1 / float64(numTicks)
-	graphResolution *= totalLength
+	var stepDistance float64 = 1 / float64(numTicks)
+	stepDistance *= totalLength
 
 	currentTickVelo := math.Abs(args[0]) + 1
 	currentTickAccel := args[1]
@@ -150,7 +152,9 @@ func main() {
 	var curvaturePlot plotter.XYs
 	var elevPlot plotter.XYs
 	var centripetalPlot plotter.XYs
+	var facingDirectionPlot plotter.XYs
 
+	facingDirectionRadians := 0.0
 	argIndex := 2
 	segmentStart := 0.0
 	tiempo := 0.00
@@ -167,9 +171,9 @@ func main() {
 		b := args[argIndex] / segmentLength
 		argIndex++
 		c := currentTickAccel
-		for i := 0.0; i < segmentLength; i += graphResolution {
+		for i := 0.0; i < segmentLength; i += stepDistance {
 			track_pos := segmentStart + i
-			timeToTravel := graphResolution / currentTickVelo
+			timeToTravel := stepDistance / currentTickVelo
 			prevVelo = currentTickVelo
 			currentTickAccel = a*math.Pow(i, 2) + b*i + c
 			currentTickVelo += currentTickAccel * timeToTravel
@@ -188,17 +192,24 @@ func main() {
 			} else {
 				maxCentripetal = max(maxCentripetal, currentTickCentripetal)
 				currentTickCentripetal = (math.Pow(currentTickVelo, 2) / math.Abs(currentCurvature))
+
+				// update facing direction
+				facingDirectionRadians += stepDistance / currentCurvature
+				if facingDirectionRadians >= 2*math.Pi {
+					facingDirectionRadians -= 2 * math.Pi
+				}
 			}
 
-			var currentTickEnergy = CalculateWorkDone(currentTickVelo, graphResolution, currentElevation, prevVelo)
-
+			var currentTickEnergy = CalculateWorkDone(currentTickVelo, stepDistance, currentElevation, prevVelo)
 			totalEnergyUsed += currentTickEnergy
+
 			accelPlot = append(accelPlot, plotter.XY{X: track_pos, Y: currentTickAccel})
 			veloPlot = append(veloPlot, plotter.XY{X: track_pos, Y: currentTickVelo})
 			energyPlot = append(energyPlot, plotter.XY{X: track_pos, Y: totalEnergyUsed})
 			curvaturePlot = append(curvaturePlot, plotter.XY{X: track_pos, Y: currentCurvature})
 			elevPlot = append(elevPlot, plotter.XY{X: track_pos, Y: currentElevation})
 			centripetalPlot = append(centripetalPlot, plotter.XY{X: track_pos, Y: currentTickCentripetal})
+			facingDirectionPlot = append(facingDirectionPlot, plotter.XY{X: track_pos, Y: facingDirectionRadians})
 
 			// if statment only needed to prevent printing final point
 			if graphOutput && colorOffsetVar/totalLength <= 1.0 {
@@ -212,7 +223,7 @@ func main() {
 
 				trackDrawingVelocities += "<stop offset=\"" + colorOffsetStr + "\" style=\"stop-color:rgb(" + strconv.Itoa(int(math.Round(255*currentTickVelo/redDivisor))) + "," + strconv.Itoa(green) + "," + strconv.Itoa(blue) + ");stop-opacity:1\"/>\n"
 
-				colorOffsetVar += graphResolution
+				colorOffsetVar += stepDistance
 			}
 		}
 
@@ -232,6 +243,7 @@ func main() {
 		outputGraph(curvaturePlot, "./plots/curvature.png")
 		outputGraph(elevPlot, "./plots/elevation.png")
 		outputGraph(centripetalPlot, "./plots/centripetal.png")
+		outputGraph(facingDirectionPlot, "./plots/facingDir.png")
 
 		// fmt.Println(trackDrawingVelocities)
 	}
