@@ -196,13 +196,15 @@ func main() {
 			if currentCurvature > 500 {
 				currentCurvature = 0
 			} else {
-				maxCentripetal = max(maxCentripetal, currentTickCentripetal)
 				currentTickCentripetal = (math.Pow(currentTickVelo, 2) / math.Abs(currentCurvature))
+				maxCentripetal = max(maxCentripetal, currentTickCentripetal)
 
 				// update facing direction
 				facingDirectionRadians += stepDistance / currentCurvature
 				if facingDirectionRadians >= 2*math.Pi {
 					facingDirectionRadians -= 2 * math.Pi
+				} else if facingDirectionRadians < 0 {
+					facingDirectionRadians += 2 * math.Pi
 				}
 			}
 
@@ -261,7 +263,6 @@ func main() {
 	fmt.Println("Max Acceleration (m/s^2):", maxAccel)
 	fmt.Println("Min Acceleration (m/s^2):", minAccel)
 	fmt.Println("Max Centripetal Acceleration (m/s^2): ", maxCentripetal)
-	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
 	fmt.Println("Time Elapsed (s): ", tiempo)
 	fmt.Println("Energy Consumed (J): ", energyPlot[len(energyPlot)-1].Y)
 	fmt.Println("Energy Consumption (W): ", energyPlot[len(energyPlot)-1].Y/tiempo)
