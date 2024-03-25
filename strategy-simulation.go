@@ -15,6 +15,10 @@ import (
 // CONSTANT DEFINITIONS:
 var segmentLengths = []float64{200, 100, 200, 100}
 
+// wind direction and speed
+var windDirectionRadians = 0.0
+var windSpeed = 10.0 //placeholder value
+
 // elevation/curvature data, evenly sampled over entire track
 var inclineSlopeSampling = []float64{0.05, -0.05, 0.05, -0.05}
 
@@ -32,12 +36,14 @@ const numTicks = 1000
 // 2-4: parabola params
 // next 3: parabola params
 
-func CalculateWorkDone(velocity float64, step_distance float64, sinAngle float64, prev_velo float64) float64 {
+func CalculateWorkDone(velocity float64, step_distance float64, sinAngle float64, prev_velo float64, facing_direction float64) float64 {
 	const carMassKg = 298.0
 	const dragCoefficient = 0.1275
 	const wheelCircumference = 1.875216
 
-	airResistance := dragCoefficient * math.Pow(velocity, 2)
+	//change the velocity to make relative to wind for airResistance only
+	relativeVelocity := velocity - windSpeed*math.Cos(math.Abs(windDirectionRadians-facing_direction))
+	airResistance := dragCoefficient * math.Pow(relativeVelocity, 2)
 
 	//mgsin(theta)
 	slope_force := carMassKg * 9.81 * sinAngle
@@ -200,7 +206,7 @@ func main() {
 				}
 			}
 
-			var currentTickEnergy = CalculateWorkDone(currentTickVelo, stepDistance, currentElevation, prevVelo)
+			var currentTickEnergy = CalculateWorkDone(currentTickVelo, stepDistance, currentElevation, prevVelo, facingDirectionRadians)
 			totalEnergyUsed += currentTickEnergy
 
 			accelPlot = append(accelPlot, plotter.XY{X: track_pos, Y: currentTickAccel})
