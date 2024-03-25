@@ -5,11 +5,12 @@ import sys
 
 from mystic.monitors import VerboseMonitor
 from mystic.solvers import *
-from mystic.strategy import Best1Bin
-from mystic.termination import VTR
+from mystic.strategy import *
+from mystic.termination import *
 
 CALLS_BETWEEN_IMAGE = 20
-MAX_VELOCITY_ALLOWED = 40.0
+MAX_VELOCITY_ALLOWED = 30.0
+MIN_VELOCITY_ALLOWED = 1.0
 MAX_ACCELERATION_ALLOWED = 3.0  # m/s^2
 MAX_DECCELERATION_ALLOWED = -2.0
 MAX_ENERGY_CONS = 1300
@@ -77,25 +78,25 @@ def objective(strategy_to_test):
 
     # Check energy consumption constraint
     if energy_consumption > MAX_ENERGY_CONS:
-        objective_value += (energy_consumption - MAX_ENERGY_CONS) * 100
+        objective_value += abs(energy_consumption - MAX_ENERGY_CONS) * 100
 
     if energy_consumption < 0:
         objective_value += abs(energy_consumption) * 100
 
     if max_velocity > MAX_VELOCITY_ALLOWED:
-        objective_value += (max_velocity - MAX_VELOCITY_ALLOWED) * 100
+        objective_value += abs(max_velocity - MAX_VELOCITY_ALLOWED) * 100
 
-    if min_velocity < 0:
+    if min_velocity < MIN_VELOCITY_ALLOWED:
         objective_value += abs(min_velocity) * 100
 
     if max_acceleration > MAX_ACCELERATION_ALLOWED:
-        objective_value += (MAX_ACCELERATION_ALLOWED - max_acceleration) * 100
+        objective_value += abs(MAX_ACCELERATION_ALLOWED - max_acceleration) * 100
 
     if min_acceleration < MAX_DECCELERATION_ALLOWED:
         objective_value += abs(min_acceleration - MAX_DECCELERATION_ALLOWED) * 100
 
     if max_centripetal_force > MAX_CENTRIPETAL_ALLOWED:
-        objective_value += (max_centripetal_force - MAX_CENTRIPETAL_ALLOWED) * 100
+        objective_value += abs(max_centripetal_force - MAX_CENTRIPETAL_ALLOWED) * 100
 
     velocity_difference = abs(final_velocity - initial_velocity)
     objective_value += velocity_difference * 100
@@ -109,23 +110,27 @@ def objective(strategy_to_test):
 
 # Initialization
 expected_args = get_expected_argument_count()
-npts = 100  # Number of points in the lattice (adjust based on problem size)
-bounds = [(0, MAX_VELOCITY_ALLOWED)] * expected_args  # Assuming bounds are known
-mon = VerboseMonitor(10)
+npts = 50  # Number of points in the lattice (adjust based on problem size)
+mon = VerboseMonitor(10, 50)
+
+lower = [0.0, -2.0]
+upper = [30.0, 3.0]
+for i in range(1, expected_args // 2):
+    lower.append(-0.1)
+    upper.append(0.1)
+
+    lower.append(-10.0)
+    upper.append(10.0)
 
 # Configure and solve using LatticeSolver
-cube_root_npts = int(round(npts ** (1 / expected_args)))  # For 3D: npts ** (1/3)
-nbins = (cube_root_npts,) * expected_args  # Adjust this based on your problem
+solver = LatticeSolver(expected_args)
+solver.SetGenerationMonitor(mon)
+solver.SetStrictRanges(lower, upper)
 
-# Initialization for target value
-target_value = 0.01  # Set this to your desired target for the objective function
-
-# Configure and solve using LatticeSolver
-solver = SparsitySolver(expected_args, npts=npts)
-solver.SetEvaluationMonitor(mon)
-# Use VTR with the target value directly
 try:
-    solver.Solve(objective, termination=VTR(target_value), strategy=Best1Bin, disp=True)
+    solver.Solve(
+        objective, termination=ChangeOverGeneration(generations=300), disp=True
+    )
 except KeyboardInterrupt:
     print("\nOptimization interrupted by user.\n")
 
