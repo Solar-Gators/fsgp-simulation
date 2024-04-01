@@ -148,7 +148,9 @@ func main() {
 	var stepDistance float64 = 1 / float64(numTicks)
 	stepDistance *= totalLength
 
-	currentTickVelo := math.Abs(args[0]) + 1
+	initialVelocity := math.Abs(args[0]) + 1
+
+	currentTickVelo := initialVelocity
 	currentTickAccel := args[1]
 
 	var accelPlot plotter.XYs
@@ -203,26 +205,30 @@ func main() {
 			if currentCurvature > 500 {
 				currentCurvature = 0
 			} else {
-				maxCentripetal = max(maxCentripetal, currentTickCentripetal)
 				currentTickCentripetal = (math.Pow(currentTickVelo, 2) / math.Abs(currentCurvature))
+				maxCentripetal = max(maxCentripetal, currentTickCentripetal)
 
 				// update facing direction
 				facingDirectionRadians += stepDistance / currentCurvature
 				if facingDirectionRadians >= 2*math.Pi {
 					facingDirectionRadians -= 2 * math.Pi
+				} else if facingDirectionRadians < 0 {
+					facingDirectionRadians += 2 * math.Pi
 				}
 			}
 
 			var currentTickEnergy = CalculateWorkDone(currentTickVelo, stepDistance, slope, prevVelo, facingDirectionRadians)
 			totalEnergyUsed += currentTickEnergy
 
-			accelPlot = append(accelPlot, plotter.XY{X: track_pos, Y: currentTickAccel})
-			veloPlot = append(veloPlot, plotter.XY{X: track_pos, Y: currentTickVelo})
-			energyPlot = append(energyPlot, plotter.XY{X: track_pos, Y: totalEnergyUsed})
-			curvaturePlot = append(curvaturePlot, plotter.XY{X: track_pos, Y: currentCurvature})
-			elevPlot = append(elevPlot, plotter.XY{X: track_pos, Y: currentElevation})
-			centripetalPlot = append(centripetalPlot, plotter.XY{X: track_pos, Y: currentTickCentripetal})
-			facingDirectionPlot = append(facingDirectionPlot, plotter.XY{X: track_pos, Y: facingDirectionRadians})
+			if graphOutput {
+				accelPlot = append(accelPlot, plotter.XY{X: track_pos, Y: currentTickAccel})
+				veloPlot = append(veloPlot, plotter.XY{X: track_pos, Y: currentTickVelo})
+				energyPlot = append(energyPlot, plotter.XY{X: track_pos, Y: totalEnergyUsed})
+				curvaturePlot = append(curvaturePlot, plotter.XY{X: track_pos, Y: currentCurvature})
+				elevPlot = append(elevPlot, plotter.XY{X: track_pos, Y: currentElevation})
+				centripetalPlot = append(centripetalPlot, plotter.XY{X: track_pos, Y: currentTickCentripetal})
+				facingDirectionPlot = append(facingDirectionPlot, plotter.XY{X: track_pos, Y: facingDirectionRadians})
+			}
 
 			// if statment only needed to prevent printing final point
 			if graphOutput && colorOffsetVar/totalLength <= 1.0 {
@@ -261,15 +267,14 @@ func main() {
 		// fmt.Println(trackDrawingVelocities)
 	}
 
-	fmt.Println("Initial Velocity (m/s):", veloPlot[0].Y)
-	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
-	fmt.Println("Max Velocity (m/s):", maxVelo)
-	fmt.Println("Min Velocity (m/s):", minVelo)
-	fmt.Println("Max Acceleration (m/s^2):", maxAccel)
-	fmt.Println("Min Acceleration (m/s^2):", minAccel)
+	fmt.Println("Initial Velocity (m/s): ", initialVelocity)
+	fmt.Println("Final Velocity (m/s): ", currentTickVelo)
+	fmt.Println("Max Velocity (m/s): ", maxVelo)
+	fmt.Println("Min Velocity (m/s): ", minVelo)
+	fmt.Println("Max Acceleration (m/s^2): ", maxAccel)
+	fmt.Println("Min Acceleration (m/s^2): ", minAccel)
 	fmt.Println("Max Centripetal Acceleration (m/s^2): ", maxCentripetal)
-	fmt.Println("Final Velocity (m/s):", veloPlot[len(veloPlot)-1].Y)
 	fmt.Println("Time Elapsed (s): ", tiempo)
-	fmt.Println("Energy Consumed (J): ", energyPlot[len(energyPlot)-1].Y)
-	fmt.Println("Energy Consumption (W): ", energyPlot[len(energyPlot)-1].Y/tiempo)
+	fmt.Println("Energy Consumed (J): ", totalEnergyUsed)
+	fmt.Println("Energy Consumption (W): ", totalEnergyUsed/tiempo)
 }
