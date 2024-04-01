@@ -161,6 +161,7 @@ func main() {
 	var elevPlot plotter.XYs
 	var centripetalPlot plotter.XYs
 	var facingDirectionPlot plotter.XYs
+	var slopePlot plotter.XYs
 
 	facingDirectionRadians := 0.0
 	slope := 0.0
@@ -228,6 +229,7 @@ func main() {
 				elevPlot = append(elevPlot, plotter.XY{X: track_pos, Y: currentElevation})
 				centripetalPlot = append(centripetalPlot, plotter.XY{X: track_pos, Y: currentTickCentripetal})
 				facingDirectionPlot = append(facingDirectionPlot, plotter.XY{X: track_pos, Y: facingDirectionRadians})
+				slopePlot = append(slopePlot, plotter.XY{X: track_pos, Y: slope})
 			}
 
 			// if statment only needed to prevent printing final point
@@ -263,6 +265,7 @@ func main() {
 		outputGraph(elevPlot, "./plots/elevation.png")
 		outputGraph(centripetalPlot, "./plots/centripetal.png")
 		outputGraph(facingDirectionPlot, "./plots/facingDir.png")
+		outputGraph(slopePlot, "./plots/slope.png")
 
 		// fmt.Println(trackDrawingVelocities)
 	}
