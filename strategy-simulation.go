@@ -20,7 +20,7 @@ var windDirectionRadians = 0.0
 var windSpeed = 10.0 //placeholder value
 
 // elevation data, evenly sampled over entire track
-var elevationSampling = []float64{400, 400, 400, 400}
+var elevationSampling = []float64{450, 400, 420, 430, 450}
 
 // positive curvature is clockwise, negative is counterclockwise
 var curvatureSampling = []float64{1000, 1000, 31.83, 1000, 1000, 31.83}
@@ -164,12 +164,12 @@ func main() {
 	var slopePlot plotter.XYs
 
 	facingDirectionRadians := 0.0
-	slope := 0.0
 	argIndex := 2
 	segmentStart := 0.0
 	tiempo := 0.00
 	velo := currentTickVelo
 	prevVelo := 0.0
+	currentElevation := elevationSampling[0]
 	var trackDrawingVelocities = ""
 	var totalEnergyUsed = 0.0
 	var maxAccel, minAccel, maxVelo, minVelo, maxCentripetal float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)
@@ -188,19 +188,17 @@ func main() {
 			currentTickAccel = a*math.Pow(i, 2) + b*i + c
 			currentTickVelo += currentTickAccel * timeToTravel
 
+			elevSegmentSize := totalLength / (float64(len(elevationSampling) - 1))
+			elevIndex := int(track_pos / elevSegmentSize)
+			slope := ((elevationSampling[elevIndex+1] - elevationSampling[elevIndex]) / elevSegmentSize) * stepDistance
+			currentElevation += slope
+
 			maxAccel = max(maxAccel, currentTickAccel)
 			minAccel = min(minAccel, currentTickAccel)
 			maxVelo = max(maxVelo, currentTickVelo)
 			minVelo = min(minVelo, currentTickVelo)
 
 			currentCurvature := curvatureSampling[int(float64(track_pos)/totalLength*float64(len(curvatureSampling)))]
-			currentElevation := elevationSampling[int(float64(track_pos)/totalLength*float64(len(elevationSampling)))]
-
-			// slope calculated after start of movement
-			if i > 0 {
-				previousElevation := elevationSampling[int((float64(track_pos)-stepDistance)/totalLength*float64(len(elevationSampling)))]
-				slope = (currentElevation - previousElevation) / stepDistance
-			}
 
 			var currentTickCentripetal = 0.0
 			if currentCurvature > 500 {
