@@ -19,8 +19,8 @@ var segmentLengths = []float64{200, 100, 200, 100}
 var windDirectionRadians = 0.0
 var windSpeed = 10.0 //placeholder value
 
-// elevation/curvature data, evenly sampled over entire track
-var inclineSlopeSampling = []float64{0.05, -0.05, 0.05, -0.05}
+// elevation data, evenly sampled over entire track
+var elevationSampling = []float64{450, 400, 420, 430, 450}
 
 // positive curvature is clockwise, negative is counterclockwise
 var curvatureSampling = []float64{1000, 1000, 31.83, 1000, 1000, 31.83}
@@ -36,7 +36,7 @@ const numTicks = 1000
 // 2-4: parabola params
 // next 3: parabola params
 
-func CalculateWorkDone(velocity float64, step_distance float64, sinAngle float64, prev_velo float64, facing_direction float64) float64 {
+func CalculateWorkDone(velocity float64, step_distance float64, slope float64, prev_velo float64, facing_direction float64) float64 {
 	const carMassKg = 298.0
 	const dragCoefficient = 0.1275
 	const wheelCircumference = 1.875216
@@ -46,7 +46,7 @@ func CalculateWorkDone(velocity float64, step_distance float64, sinAngle float64
 	airResistance := dragCoefficient * math.Pow(relativeVelocity, 2)
 
 	//mgsin(theta)
-	slope_force := carMassKg * 9.81 * sinAngle
+	slope_force := carMassKg * 9.81 * math.Sin(math.Atan(slope)) // slope = tan(Theta)
 	net_velo_energy := .5 * carMassKg * (velocity - prev_velo)
 	total_force := airResistance + slope_force
 	total_work := total_force*step_distance + net_velo_energy
@@ -161,6 +161,7 @@ func main() {
 	var elevPlot plotter.XYs
 	var centripetalPlot plotter.XYs
 	var facingDirectionPlot plotter.XYs
+	var slopePlot plotter.XYs
 
 	facingDirectionRadians := 0.0
 	argIndex := 2
@@ -168,6 +169,7 @@ func main() {
 	tiempo := 0.00
 	velo := currentTickVelo
 	prevVelo := 0.0
+	currentElevation := elevationSampling[0]
 	var trackDrawingVelocities = ""
 	var totalEnergyUsed = 0.0
 	var maxAccel, minAccel, maxVelo, minVelo, maxCentripetal float64 = math.Inf(-1), math.Inf(1), math.Inf(-1), math.Inf(1), math.Inf(-1)
@@ -186,13 +188,17 @@ func main() {
 			currentTickAccel = a*math.Pow(i, 2) + b*i + c
 			currentTickVelo += currentTickAccel * timeToTravel
 
+			elevSegmentSize := totalLength / (float64(len(elevationSampling) - 1))
+			elevIndex := int(track_pos / elevSegmentSize)
+			slope := ((elevationSampling[elevIndex+1] - elevationSampling[elevIndex]) / elevSegmentSize) * stepDistance
+			currentElevation += slope
+
 			maxAccel = max(maxAccel, currentTickAccel)
 			minAccel = min(minAccel, currentTickAccel)
 			maxVelo = max(maxVelo, currentTickVelo)
 			minVelo = min(minVelo, currentTickVelo)
 
 			currentCurvature := curvatureSampling[int(float64(track_pos)/totalLength*float64(len(curvatureSampling)))]
-			currentElevation := inclineSlopeSampling[int(float64(track_pos)/totalLength*float64(len(inclineSlopeSampling)))]
 
 			var currentTickCentripetal = 0.0
 			if currentCurvature > 500 {
@@ -210,7 +216,7 @@ func main() {
 				}
 			}
 
-			var currentTickEnergy = CalculateWorkDone(currentTickVelo, stepDistance, currentElevation, prevVelo, facingDirectionRadians)
+			var currentTickEnergy = CalculateWorkDone(currentTickVelo, stepDistance, slope, prevVelo, facingDirectionRadians)
 			totalEnergyUsed += currentTickEnergy
 
 			if graphOutput {
@@ -221,6 +227,7 @@ func main() {
 				elevPlot = append(elevPlot, plotter.XY{X: track_pos, Y: currentElevation})
 				centripetalPlot = append(centripetalPlot, plotter.XY{X: track_pos, Y: currentTickCentripetal})
 				facingDirectionPlot = append(facingDirectionPlot, plotter.XY{X: track_pos, Y: facingDirectionRadians})
+				slopePlot = append(slopePlot, plotter.XY{X: track_pos, Y: slope})
 			}
 
 			// if statment only needed to prevent printing final point
@@ -256,6 +263,7 @@ func main() {
 		outputGraph(elevPlot, "./plots/elevation.png")
 		outputGraph(centripetalPlot, "./plots/centripetal.png")
 		outputGraph(facingDirectionPlot, "./plots/facingDir.png")
+		outputGraph(slopePlot, "./plots/slope.png")
 
 		// fmt.Println(trackDrawingVelocities)
 	}
